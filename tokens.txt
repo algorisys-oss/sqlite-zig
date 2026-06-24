@@ -1,0 +1,40 @@
+# tokens.txt — ACTUAL per-prompt token usage
+#
+# REAL figures from the Claude Code session transcript (API `usage` per
+# assistant step), NOT estimates. Regenerate with:
+#   python3 tools/token_usage.py          (table)
+#   python3 tools/token_usage.py --tsv     (machine-readable)
+#
+# A "turn" = one human prompt + ALL assistant work it triggered (every tool
+# round-trip), up to the next prompt. TOTAL = input + cache_creation +
+# cache_read + output. cache_read dominates (context re-read each step).
+# Follow-ups sent mid-turn are queued into that turn, so their cost folds in.
+# The currently-running turn isn't fully recorded until it ends.
+#
+# columns: start  end   input  cache_cr  cache_rd  output  ->  TOTAL  (cumulative)
+
+[2026-06-24] 23:53:30-23:56:06  in=14937  cr=58608   rd=547112    out=26658  ->  TOTAL=647315     (cum=647315)
+    prompt: Set up project (migrate SQLite C->Zig); create CLAUDE.md + plan.md.
+    folded: count total tokens in project root; save per-prompt token count.
+
+[2026-06-24] 23:59:22-00:13:08  in=3918   cr=115193  rd=6570937   out=98286  ->  TOTAL=6788334    (cum=7435649)
+    prompt: Start Phase 0; keep track of things so we can continue later.
+    folded: also track start/end time of each prompt (+ update CLAUDE.md).
+    note:   out-of-tree generation, vendoring, build.zig, functional test gate.
+
+[2026-06-25] 00:13:32-00:18:10  in=2381   cr=51385   rd=3428512   out=41800  ->  TOTAL=3524078    (cum=10959727)
+    prompt: Draft a README.md and indicate how to verify/test.
+    folded: track ACTUAL token usage per prompt, not just prompt tokens
+            -> wrote tools/token_usage.py; tokens.txt now reflects real data.
+
+[2026-06-25] 00:19:04-00:25:16  in=2406   cr=64866   rd=5055426   out=63061  ->  TOTAL=5185759    (cum=16145486)
+    prompt: What's next? -> first real port: random.c -> src/random.zig
+            (+ src/chacha.zig); proved swap mechanism; RFC 7539 vector check.
+
+[2026-06-25] 00:27:02-(in progress)  in=4564  cr=147260  rd=10095783  out=92412  ->  TOTAL=10340019  (cum=26485505)
+    prompt: Wire up the TCL testfixture suite (vendor tcl headers, no sudo).
+    folded: git init and commit; park for today, continue tomorrow.
+    note:   figures are through the last recorded step; re-run the script next
+            session to capture this turn's tail.
+
+# Session actual total so far: 26,485,505 tokens.

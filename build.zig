@@ -1,0 +1,166 @@
+//! sqlite-zig build — Phase 0 foundation.
+//!
+//! Two build modes:
+//!   * split (default): compile each SQLite C translation unit from vendor/tsrc
+//!     separately, then link.  This is the mode that enables the incremental
+//!     C -> Zig migration: as each module is ported, its .c file is dropped
+//!     from the list (see `ported_modules`) and the Zig replacement in src/ is
+//!     compiled in its place, keeping the same C-ABI symbols.
+//!   * amalgamation (-Damalgamation=true): build the single-file sqlite3.c.
+//!     A fast sanity check; cannot be swapped file-by-file.
+//!
+//! Both produce a static libsqlite3 and the `sqlite3` CLI shell.
+
+const std = @import("std");
+
+/// SQLite compile-time configuration. Mirrors the upstream `--dev` configure
+/// (OPT_FEATURE_FLAGS + shell options). SQLITE_CORE makes the bundled
+/// extensions (fts5, rtree, ...) link into the core instead of each declaring
+/// its own loadable-extension `sqlite3_api` pointer.
+const sqlite_flags = [_][]const u8{
+    "-DSQLITE_CORE=1",
+    "-DSQLITE_THREADSAFE=1",
+    "-DSQLITE_ENABLE_MATH_FUNCTIONS",
+    "-DSQLITE_ENABLE_FTS4",
+    "-DSQLITE_ENABLE_FTS5",
+    "-DSQLITE_ENABLE_RTREE",
+    "-DSQLITE_ENABLE_GEOPOLY",
+    "-DSQLITE_ENABLE_SESSION",
+    "-DSQLITE_ENABLE_PREUPDATE_HOOK",
+    "-DSQLITE_ENABLE_CARRAY",
+    "-DSQLITE_ENABLE_MEMSYS5",
+    "-DSQLITE_ENABLE_PERCENTILE",
+    "-DSQLITE_ENABLE_DBPAGE_VTAB",
+    "-DSQLITE_ENABLE_DBSTAT_VTAB",
+    "-DSQLITE_ENABLE_STMTVTAB",
+    "-DSQLITE_ENABLE_BYTECODE_VTAB",
+    "-DSQLITE_ENABLE_OFFSET_SQL_FUNC",
+    "-DSQLITE_ENABLE_UNKNOWN_SQL_FUNCTION",
+    "-DSQLITE_ENABLE_EXPLAIN_COMMENTS",
+    "-DSQLITE_DQS=0",
+    "-DSQLITE_HAVE_ZLIB=1",
+};
+
+/// tsrc files that are NOT standalone translation units and must be skipped
+/// when compiling the library:
+///   geopoly.c     -> #include'd into rtree.c
+///   shell.c       -> the CLI's main(); linked only into the executable
+///   tclsqlite-ex.c-> TCL test harness, needs tcl.h; not part of the library
+const non_tu = [_][]const u8{ "geopoly.c", "shell.c", "tclsqlite-ex.c" };
+
+/// Modules that have been ported to Zig. As each lands, add its C basename
+/// (e.g. "random.c") here AND add the corresponding src/<name>.zig below.
+/// The C file is then excluded and the Zig object linked in its place.
+const ported_modules = [_][]const u8{
+    "random.c", // -> src/random.zig (first port; PRNG)
+};
+
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+    const use_amalgamation = b.option(bool, "amalgamation", "Build the single-file amalgamation instead of the per-file split build") orelse false;
+
+    const include_dir: []const u8 = if (use_amalgamation) "vendor/amalg" else "vendor/tsrc";
+
+    const lib_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    lib_mod.addIncludePath(b.path(include_dir));
+
+    if (use_amalgamation) {
+        lib_mod.addCSourceFile(.{ .file = b.path("vendor/amalg/sqlite3.c"), .flags = &sqlite_flags });
+    } else {
+        const tu = collectTranslationUnits(b) catch |e| std.debug.panic("failed to scan vendor/tsrc: {s}", .{@errorName(e)});
+        lib_mod.addCSourceFiles(.{ .files = tu, .flags = &sqlite_flags });
+
+        // Compile any ported Zig modules into the same library.
+        for (ported_modules) |m| {
+            const stem = m[0 .. m.len - 2];
+            const zig_name = b.fmt("src/{s}.zig", .{stem});
+            const obj = b.addObject(.{
+                .name = stem,
+                .root_module = b.createModule(.{
+                    .root_source_file = b.path(zig_name),
+                    .target = target,
+                    .optimize = optimize,
+                }),
+            });
+            lib_mod.addObject(obj);
+        }
+    }
+
+    const lib = b.addLibrary(.{ .name = "sqlite3", .linkage = .static, .root_module = lib_mod });
+    b.installArtifact(lib);
+
+    // CLI shell: shell.c + the library.
+    const shell_mod = b.createModule(.{
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    shell_mod.linkLibrary(lib);
+    shell_mod.linkSystemLibrary("z", .{});
+    shell_mod.linkSystemLibrary("m", .{});
+    shell_mod.addIncludePath(b.path(include_dir));
+    shell_mod.addCSourceFile(.{
+        .file = b.path(b.fmt("{s}/shell.c", .{include_dir})),
+        .flags = &sqlite_flags,
+    });
+    const shell = b.addExecutable(.{ .name = "sqlite3", .root_module = shell_mod });
+    b.installArtifact(shell);
+
+    // `zig build run` launches the shell (interactive). For ad-hoc queries,
+    // run the installed binary directly: zig-out/bin/sqlite3 :memory: "select 1"
+    const run = b.addRunArtifact(shell);
+    b.step("run", "Run the sqlite3 shell").dependOn(&run.step);
+
+    // `zig build smoke` — minimal end-to-end check.
+    const smoke = b.addRunArtifact(shell);
+    smoke.addArgs(&.{ ":memory:", "create table t(a,b); insert into t values(1,'x'),(2,'y'); select count(*)||'|'||group_concat(b) from t;" });
+    smoke.expectStdOutEqual("2|x,y\n");
+    b.step("smoke", "Build and run a smoke-test query").dependOn(&smoke.step);
+
+    // `zig build test` — functional regression battery (core SQL + extensions).
+    // Until the full upstream TCL `testfixture` suite is wired in, this is the
+    // gate every ported module must keep green. See PROGRESS.md.
+    const func = b.addRunArtifact(shell);
+    func.setCwd(b.path("."));
+    func.addArgs(&.{ ":memory:", ".read test/functional.sql" });
+    func.expectStdOutEqual(@embedFile("test/functional.expected"));
+    const test_step = b.step("test", "Run the functional regression battery");
+    test_step.dependOn(&func.step);
+
+    // `zig build test-unit` — Zig unit tests for ported modules (algorithm-level
+    // checks, e.g. ChaCha20 against the RFC test vector). Also folded into `test`.
+    const unit_step = b.step("test-unit", "Run Zig unit tests for ported modules");
+    for ([_][]const u8{"src/chacha.zig"}) |t| {
+        const ut = b.addTest(.{ .root_module = b.createModule(.{
+            .root_source_file = b.path(t),
+            .target = target,
+            .optimize = optimize,
+        }) });
+        unit_step.dependOn(&b.addRunArtifact(ut).step);
+    }
+    test_step.dependOn(unit_step);
+}
+
+/// The library translation-unit list. Sourced from vendor/tu.txt (one C
+/// basename per line), which was generated from vendor/tsrc excluding the
+/// non-standalone files in `non_tu`. Regenerate tu.txt if the vendored sources
+/// change. Modules in `ported_modules` are dropped here and replaced by their
+/// Zig object.
+const tu_manifest = @embedFile("vendor/tu.txt");
+
+fn collectTranslationUnits(b: *std.Build) ![]const []const u8 {
+    var list: std.ArrayListUnmanaged([]const u8) = .empty;
+    var it = std.mem.tokenizeScalar(u8, tu_manifest, '\n');
+    outer: while (it.next()) |name| {
+        const trimmed = std.mem.trim(u8, name, " \r\t");
+        if (trimmed.len == 0) continue;
+        for (ported_modules) |skip| if (std.mem.eql(u8, trimmed, skip)) continue :outer;
+        try list.append(b.allocator, b.fmt("vendor/tsrc/{s}", .{trimmed}));
+    }
+    return list.toOwnedSlice(b.allocator);
+}
