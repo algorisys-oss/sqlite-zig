@@ -75,7 +75,7 @@ const MemMethods = extern struct {
 // --- Ground-truth reads of sqlite3GlobalConfig fields ---
 // SQLITE_OMIT_WSD is off, so sqlite3GlobalConfig is literally the global
 // `sqlite3Config`. We read four fields at their config-specific offsets.
-extern const sqlite3Config: u8;
+extern var sqlite3Config: u8;  // mutable global — see pcache.zig note
 inline fn cfgBase() [*]const u8 {
     return @ptrCast(&sqlite3Config);
 }

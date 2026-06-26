@@ -56,7 +56,7 @@ extern fn sqlite3FaultSim(x: c_int) c_int;
 /// `sqlite3Config` global (`struct Sqlite3Config`). We read only `bCoreMutex`,
 /// a `u8` at the config-invariant offset 4 (it follows the sole leading
 /// `int bMemstat`). Read solely for the debug-only create-path assert.
-extern const sqlite3Config: u8;
+extern var sqlite3Config: u8;  // mutable global — see pcache.zig note
 const Sqlite3Config_bCoreMutex: usize = 4;
 inline fn coreMutexEnabled() bool {
     const base: [*]const u8 = @ptrCast(&sqlite3Config);

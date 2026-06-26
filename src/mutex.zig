@@ -91,7 +91,7 @@ extern fn sqlite3DefaultMutex() *const MutexMethods;
 // SQLITE_OMIT_WSD is off, so sqlite3GlobalConfig is literally the global
 // `sqlite3Config`. We read `mutex` (the embedded method table) and `bCoreMutex`
 // at their config-invariant offsets.
-extern const sqlite3Config: u8;
+extern var sqlite3Config: u8;  // mutable global — see pcache.zig note
 inline fn cfgBase() [*]u8 {
     const p: [*]const u8 = @ptrCast(&sqlite3Config);
     return @constCast(p);

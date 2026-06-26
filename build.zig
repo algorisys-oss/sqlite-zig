@@ -76,6 +76,7 @@ const ported_modules = [_][]const u8{
     "mutex.c", // -> src/mutex.zig (mutex dispatch layer)
     "vdbetrace.c", // -> src/vdbetrace.zig (sqlite3VdbeExpandSql for tracing)
     "legacy.c", // -> src/legacy.zig (sqlite3_exec)
+    "pcache.c", // -> src/pcache.zig (page-cache dispatch + dirty-list mgmt)
 };
 
 pub fn build(b: *std.Build) void {

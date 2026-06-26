@@ -60,5 +60,22 @@ int main(void) {
     P(Sqlite3Config, bMemstat);
     P(Sqlite3Config, mutex); /* mutex.c dispatches through this embedded methods sub-struct */
     P(Sqlite3Config, bCoreMutex);
+    P(Sqlite3Config, pcache2); /* pcache.c dispatches through this embedded methods sub-struct */
+
+    /* PgHdr — pcache.c; ABI-shared (defined in pcache.h, the pager reads it). */
+    SZ(PgHdr, PgHdr);
+    P(PgHdr, pPage);
+    P(PgHdr, pData);
+    P(PgHdr, pExtra);
+    P(PgHdr, pCache);
+    P(PgHdr, pDirty);
+    P(PgHdr, pPager);
+    P(PgHdr, pgno);
+    P(PgHdr, flags);
+    P(PgHdr, nRef);
+    P(PgHdr, pDirtyNext);
+    P(PgHdr, pDirtyPrev);
+    /* NOTE: struct PCache is opaque (defined only in pcache.c, not a header), so
+    ** its layout is owned by src/pcache.zig and not extracted here. */
     return 0;
 }

@@ -41,6 +41,19 @@ const prod = struct {
     pub const Sqlite3Config_bMemstat: usize = 0;
     pub const Sqlite3Config_mutex: usize = 96;
     pub const Sqlite3Config_bCoreMutex: usize = 4;
+    pub const Sqlite3Config_pcache2: usize = 168;
+    pub const sizeof_PgHdr: usize = 80;
+    pub const PgHdr_pPage: usize = 0;
+    pub const PgHdr_pData: usize = 8;
+    pub const PgHdr_pExtra: usize = 16;
+    pub const PgHdr_pCache: usize = 24;
+    pub const PgHdr_pDirty: usize = 32;
+    pub const PgHdr_pPager: usize = 40;
+    pub const PgHdr_pgno: usize = 48;
+    pub const PgHdr_flags: usize = 52;
+    pub const PgHdr_nRef: usize = 56;
+    pub const PgHdr_pDirtyNext: usize = 64;
+    pub const PgHdr_pDirtyPrev: usize = 72;
 };
 
 /// --dev testfixture config (SQLITE_DEBUG + SQLITE_TEST).
@@ -77,6 +90,19 @@ const tf = struct {
     pub const Sqlite3Config_bMemstat: usize = 0;
     pub const Sqlite3Config_mutex: usize = 96;
     pub const Sqlite3Config_bCoreMutex: usize = 4;
+    pub const Sqlite3Config_pcache2: usize = 168;
+    pub const sizeof_PgHdr: usize = 80;
+    pub const PgHdr_pPage: usize = 0;
+    pub const PgHdr_pData: usize = 8;
+    pub const PgHdr_pExtra: usize = 16;
+    pub const PgHdr_pCache: usize = 24;
+    pub const PgHdr_pDirty: usize = 32;
+    pub const PgHdr_pPager: usize = 40;
+    pub const PgHdr_pgno: usize = 48;
+    pub const PgHdr_flags: usize = 52;
+    pub const PgHdr_nRef: usize = 56;
+    pub const PgHdr_pDirtyNext: usize = 64;
+    pub const PgHdr_pDirtyPrev: usize = 72;
 };
 
 /// The layout namespace matching the current build.

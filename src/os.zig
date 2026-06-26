@@ -102,7 +102,7 @@ extern fn sqlite3_os_init() c_int;
 extern fn strcmp(a: [*:0]const u8, b: [*:0]const u8) c_int;
 
 /// `sqlite3Config` global; we read only `iPrngSeed` (config-invariant offset).
-extern const sqlite3Config: u8;
+extern var sqlite3Config: u8;  // mutable global — see pcache.zig note
 inline fn prngSeed() u32 {
     const base: [*]const u8 = @ptrCast(&sqlite3Config);
     const p4: *const [4]u8 = @ptrCast(base + L.Sqlite3Config_iPrngSeed);
