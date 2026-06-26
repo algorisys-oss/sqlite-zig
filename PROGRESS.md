@@ -36,17 +36,17 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
   `TABTYP_VTAB`/`VIEW` swapped, so vtabs misclassified as views and skipped the
   one-pass `updateVirtualTable` path.
 
-### Known issues (minor, tracked)
+### Known issues
 
-- **vtab1-24.2 (`--dev`/testfixture only): FTS3 savepoint assertion.** In the
-  SQLITE_DEBUG config, `fts3SavepointMethod`'s `TESTONLY` monotonicity assert
-  (`pTab->mxSavepoint<=iSavepoint`) trips after a `SAVEPOINT/ROLLBACK TO/RELEASE`
-  cycle on an FTS3 table. **Production is byte-identical to pure-C** (rollback,
-  integrity-check, and subsequent ops all correct) — the entire savepoint path
-  (`OP_Savepoint`, the statement-journal open, `sqlite3VtabSavepoint`) matches
-  upstream and the `nStatement`/`nSavepoint` offsets are ground-truthed for both
-  configs, so this is a debug-only accounting-order discrepancy, not a
-  correctness bug. Does not affect the production engine.
+None currently open.
+
+(Previously tracked: the vtab1-24.2 FTS3 savepoint assertion — FIXED. It turned
+out to share a root cause with an `fkey2` production crash: `OP_Savepoint`'s
+RELEASE cleanup recomputed `isTransaction` *after* the commit path had cleared
+`db->isTransactionSavepoint`, so it wrongly decremented `db->nSavepoint` for a
+transaction savepoint. nSavepoint went negative and a later `ROLLBACK TO`
+null-dereffed the pager's savepoint array. Fixed by reusing the single
+`isTransaction` local computed before the commit path, matching upstream.)
 
 ### Earlier baseline
 

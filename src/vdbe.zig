@@ -2542,18 +2542,23 @@ fn opSavepoint(p: ?*Vdbe, db: ?*anyopaque, pOp: *Op, rc: *c_int, exitKind: *Exit
                 sqlite3DbFree(db, pTmp);
                 wr(c_int, db, sqlite3_nSavepoint, rd(c_int, db, sqlite3_nSavepoint) - 1);
             }
-            const isTransaction2 = rdPtr(pSavepoint, Savepoint_pNext) == null and rdU8(db, sqlite3_isTransactionSavepoint) != 0;
+            // Use the `isTransaction` computed at the top (before the RELEASE
+            // commit path may clear db->isTransactionSavepoint). Recomputing it
+            // here read the already-cleared flag and wrongly decremented
+            // nSavepoint for a transaction savepoint (→ nSavepoint went negative,
+            // crashing a later ROLLBACK in the pager). Matches upstream, which
+            // reuses the single `isTransaction` local.
             if (p1 == SAVEPOINT_RELEASE) {
                 wrPtr(db, sqlite3_pSavepoint, rdPtr(pSavepoint, Savepoint_pNext));
                 sqlite3DbFree(db, pSavepoint);
-                if (!isTransaction2) {
+                if (!isTransaction) {
                     wr(c_int, db, sqlite3_nSavepoint, rd(c_int, db, sqlite3_nSavepoint) - 1);
                 }
             } else {
                 wr(i64, db, sqlite3_nDeferredCons, rd(i64, pSavepoint, Savepoint_nDeferredCons));
                 wr(i64, db, sqlite3_nDeferredImmCons, rd(i64, pSavepoint, Savepoint_nDeferredImmCons));
             }
-            if (!isTransaction2 or p1 == SAVEPOINT_ROLLBACK) {
+            if (!isTransaction or p1 == SAVEPOINT_ROLLBACK) {
                 rc.* = sqlite3VtabSavepoint(db, p1, iSavepoint);
                 if (rc.* != SQLITE_OK) {
                     exitKind.* = .abort_error;
