@@ -179,6 +179,12 @@ pub fn build(b: *std.Build) void {
     const shell = b.addExecutable(.{ .name = "sqlite3", .root_module = shell_mod });
     b.installArtifact(shell);
 
+    // Same CLI, installed a second time under the project's own name so users
+    // can invoke `sqlite-zig` (identical bytes — the shell linked against the
+    // ported-Zig libsqlite3.a; it self-identifies as "sqlite-zig" via argv[0]).
+    const shell_zig_install = b.addInstallArtifact(shell, .{ .dest_sub_path = "sqlite-zig" });
+    b.getInstallStep().dependOn(&shell_zig_install.step);
+
     // `zig build run` launches the shell (interactive). For ad-hoc queries,
     // run the installed binary directly: zig-out/bin/sqlite3 :memory: "select 1"
     const run = b.addRunArtifact(shell);
