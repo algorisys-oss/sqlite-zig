@@ -311,6 +311,30 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
 - 2026-06-26: build.zig now also installs the CLI shell as `sqlite-zig` (same
   bytes as `sqlite3`, linked against the ported-Zig lib) so the project ships a
   CLI under its own name.
+- 2026-06-26: Ported `loadext.c` (runtime extension loading) — 31 modules. 7
+  exports + the 279-slot `sqlite3_api_routines` dispatch table (preprocessed
+  from the C initializer). Bug: the agent emitted the 6 ENABLE_COLUMN_METADATA
+  entries (sqlite3_column_{database,table,origin}_name(16)) as real symbols, but
+  that flag is OFF in both configs → upstream `#define`s them to 0 and the
+  symbols don't exist (link error). Nulled those 6 slots. New offsets sqlite3
+  aExtension/nExtension. TCL loadext(54)/loadext2(23) green.
+- 2026-06-26: Ported `vtab.c` (virtual-table object management) — 32 modules; 30
+  exports, the most struct-coupled port (Module/VTable/sqlite3_vtab/Table.u.vtab
+  union/Parse/sqlite3 at ground-truth offsets). Bug: `extern fn sqlite3StrNICmp`
+  — that name is a C macro aliasing the public sqlite3_strnicmp (no such symbol);
+  call sqlite3_strnicmp. Parse.disableTriggers (:1 bitfield) gated on config
+  (byte 39 prod / 42 tf). TCL vtab1-9/vtabH/vtabA/fts3aa/fts4aa/carray01/
+  stmtvtab1/bestindex1 green.
+- 2026-06-26: Ported `prepare.c` (sqlite3_prepare* + schema init) — 33 modules,
+  16 exports, on every query's hot path. Two bugs: (1) TriggerPrg.pNext is at
+  off 8 (pTrigger is the first field), not 0 — reading 0 corrupted the
+  end-of-prepare TriggerPrg cleanup walk and segfaulted on any INSERT firing a
+  trigger. (2) SQLITE_*_BKPT helpers (sqlite3{Nomem,Corrupt,Misuse}Error) exist
+  only under SQLITE_DEBUG; gated on config.sqlite_debug so the production link
+  resolves. Many new offsets incl. nested init.*/lookaside.* composites and the
+  PARSE_HDR_SZ/PARSE_RECURSE_SZ macros; Parse.checkSchema (:1 bitfield) gated on
+  config. TCL trigger1-3/view/schema/reindex/alter/attach2/capi3(250)/tableapi/
+  bind/shared(211) green.
 
 ### Resume guide — continuing the agent-parallelized migration
 The authoritative ordered list of ported modules (with one-line descriptions) is
@@ -326,15 +350,25 @@ The authoritative ordered list of ported modules (with one-line descriptions) is
    the stem to `MODULES` in tools/tcltest.sh; `zig build` (comptime offset
    asserts validate the mirror); `zig build test`; `tools/tcltest.sh --zig
    <relevant tests>`; commit.
-Good next targets (harder — deeper struct coupling): prepare.c, vtab.c,
-analyze.c, pragma.c, loadext.c, then the storage/VDBE core (pager/btree/vdbe —
-port in slices, not one shot). Done so far incl. printf.c, util.c, callback.c,
-vdbevtab.c, fts3_aux.c (see ported_modules in build.zig for the full list).
-Gotcha pattern to watch (cost real debug time this session): C unsigned/u64
-accumulation (`x = x*10 + d`) wraps by definition — port with `*%`/`+%`, not
-checked ops, wherever the magnitude is re-validated afterward rather than
-bounded before. And a C `char[]` symbol's *address* is the data: bind it as
-`extern const <name>: u8` and take `&`, never as a `[*:0]const u8` value.
+Good next targets: analyze.c, pragma.c, vacuum.c, attach.c, auth.c, trigger.c,
+then the storage/VDBE core (pager/btree/vdbe — port in slices, not one shot).
+See `ported_modules` in build.zig for the 33 done (printf, util, callback,
+vdbevtab, fts3_aux, loadext, vtab, prepare, …).
+Gotcha patterns that each cost real debug time — brief the agents on these:
+  - **Struct field ORDER**: never assume a field is at offset 0 / "first". Probe
+    EVERY field with offsetof (TriggerPrg.pNext is at 8, not 0 — that crashed the
+    trigger path). Add a `P(Struct,field)` so the comptime assert catches it.
+  - **u64 wrap**: C unsigned accumulation (`x = x*10 + d`) wraps by definition —
+    port with `*%`/`+%` where magnitude is re-validated after (not bounded before).
+  - **`char[]` symbol**: its *address* is the data — bind `extern const <name>: u8`
+    and take `&`, never a `[*:0]const u8` value.
+  - **`(u16)x`/`(i16)x` to a field**: bit-truncate → `@truncate`, not `@intCast`.
+  - **C `va_list` parameter**: take `*std.builtin.VaList`, not by value.
+  - **Macro-alias symbols**: `sqlite3StrNICmp`=macro→`sqlite3_strnicmp`;
+    `SQLITE_*_BKPT` error fns (`sqlite3{Nomem,Corrupt,Misuse}Error`) exist only
+    under SQLITE_DEBUG — gate calls on `config.sqlite_debug`.
+  - **Flag-gated api/table entries** (loadext): match the build's flags; OFF →
+    the symbol may not exist (NULL the slot).
 Deferred and why: ctime.c (compile-option list diverges by ~many flags → expand
 the `config` options module first); global.c (defines the sqlite3Config struct
 itself — every c_layout offset depends on it; high-stakes, do deliberately).
