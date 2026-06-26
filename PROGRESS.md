@@ -4,14 +4,27 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 0 done; Phase 1 in progress (11 modules ported)
+## Current status: Phase 0 done; Phase 1 in progress (16 modules ported)
 
 A Zig build system compiles upstream SQLite C (v3.54.0) into a static
-`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Eleven
-modules are now **ported to Zig** and linked in place of their C versions:
-`random.c`, `hash.c`, `bitvec.c`, `rowset.c`, `fault.c`, `mem1.c`, `complete.c`,
-`memjournal.c`, `fts3_hash.c`, `utf.c` (first **core-struct-coupled** module),
-`os.c` (VFS dispatch — every file I/O now flows through Zig).
+`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Sixteen
+modules are now **ported to Zig**: `random.c`, `hash.c`, `bitvec.c`, `rowset.c`,
+`fault.c`, `mem1.c`, `complete.c`, `memjournal.c`, `fts3_hash.c`, `utf.c` (first
+**core-struct-coupled** module), `os.c` (VFS dispatch — every file I/O now Zig),
+plus a parallel-agent batch: `fts3_porter.c`, `fts3_tokenizer1.c`,
+`fts3_unicode.c` (FTS3 tokenizers), `carray.c` (table-valued fn / vtab), and
+`table.c` (`sqlite3_get_table`).
+
+**Zig-native test suite:** beyond validating against SQLite's TCL `testfixture`,
+test cases are also ported to Zig — `test/engine_test.zig` (`zig build test-zig`,
+folded into `zig build test`) drives the engine through the public C API and
+asserts results, linked against this `libsqlite3.a` so it exercises every ported
+Zig module from Zig. Some modules also carry pure-logic Zig `test` blocks.
+
+**Scaling via agents:** ports are now parallelized — sub-agents do the
+read-C/write-Zig work (each a new `src/<name>.zig`); the orchestrator owns the
+shared files (build.zig, tcltest.sh, c_layout.zig/offsets.c) and runs the
+authoritative build + TCL validation + commit, sequentially.
 
 Each passes the functional gate (`zig build test`) and SQLite's own TCL
 `testfixture` suite with the Zig objects swapped in. Notably the Zig `mem1`
@@ -230,3 +243,9 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   11 modules; every file I/O now flows through Zig. SQLITE_TEST fault-injection
   state gated on config.sqlite_test via comptime @export. TCL ioerr(10885)/
   pager1(1373)/lock/mmap1/oserror green.
+- 2026-06-26: Began agent-parallelized porting. Added a Zig-native engine test
+  suite (test/engine_test.zig, `zig build test-zig`). Integrated a wave of
+  agent-written ports: fts3_porter.c, fts3_tokenizer1.c, fts3_unicode.c,
+  carray.c (config-invariant) and table.c (reads db->errCode at a ground-truth
+  offset) — 16 modules. TCL fts3aa/fts3ad/fts4unicode/carray01/tabfunc01(246)/
+  table(97)/tableapi(171)/capi2 green.

@@ -157,7 +157,9 @@ Tokenizer → parser → code generator → optimizer. Depends on VDBE.
 
 ## Phase 6 — Public API & entry points
 
-- [ ] `main.c`, `legacy.c`, `prepare.c`, `callback.c`, `loadext.c`, `table.c`
+- [x] `table.c` — sqlite3_get_table → `src/table.zig` (agent-ported; reads
+      db->errCode at a ground-truth offset). `main.c`, `legacy.c`, `prepare.c`,
+      `callback.c`, `loadext.c` remain.
 - [ ] `sqlite.h.in` → produce a Zig-friendly + C-ABI `sqlite3.h`
 - [ ] `shell.c.in` — CLI (can stay C longest; low value to port early)
 
@@ -168,6 +170,9 @@ full `testrunner.tcl full` green.
 
 - [x] `fts3_hash.c` — FTS3 standalone hash table → `src/fts3_hash.zig` (ported
       early as a clean config-invariant leaf; TCL fts3*/fts4aa green).
+- [x] FTS3 tokenizers → `src/fts3_porter.zig` / `src/fts3_tokenizer1.zig` /
+      `src/fts3_unicode.zig` (agent-ported, config-invariant; fts3ad/fts4unicode).
+- [x] `carray.c` — table-valued fn / vtab → `src/carray.zig` (carray01/tabfunc01).
 - [ ] FTS5, RTREE, JSON1 (if not folded in), session, rbu — under `ext/`
 - [ ] Windows VFS (`os_win.c`), other platforms
 - [ ] A native Zig API surface (idiomatic, not just the C ABI)
