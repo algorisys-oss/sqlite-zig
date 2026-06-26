@@ -86,6 +86,7 @@ const ported_modules = [_][]const u8{
     "loadext.c", // -> src/loadext.zig (runtime extension loading + api table)
     "vtab.c", // -> src/vtab.zig (virtual-table object management)
     "prepare.c", // -> src/prepare.zig (sqlite3_prepare* + schema init)
+    "auth.c", // -> src/auth.zig (authorization callback layer)
 };
 
 pub fn build(b: *std.Build) void {

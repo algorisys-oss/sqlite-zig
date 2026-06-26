@@ -146,6 +146,23 @@ int main(void) {
     P(Table, pIndex);
     P(Schema, schemaFlags);
     P(TriggerPrg, pNext); /* prepare.c walks the TriggerPrg cleanup list */
+    /* auth.c — authorization callback over schema objects. */
+    P(sqlite3, pAuthArg);
+    P(Parse, zAuthContext);
+    P(Parse, eParseMode);
+    P(Parse, pTriggerTab);
+    P(Table, nCol);
+    P(Table, iPKey);
+    P(Table, aCol);
+    SZ(Column, Column);
+    P(Expr, op);
+    P(Expr, iTable);
+    P(Expr, iColumn);
+    P(SrcList, nSrc);
+    P(SrcList, a);
+    P(SrcItem, iCursor);
+    P(SrcItem, pSTab);
+    SZ(SrcItem, SrcItem);
     /* sqlite3.init sub-struct (sqlite3InitInfo) — nested composite offsets. */
     printf("sqlite3_init_newTnum %zu\n", offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, newTnum));
     printf("sqlite3_init_iDb %zu\n",     offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, iDb));
