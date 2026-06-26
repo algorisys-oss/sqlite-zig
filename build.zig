@@ -53,6 +53,11 @@ const non_tu = [_][]const u8{ "geopoly.c", "shell.c", "tclsqlite-ex.c" };
 /// The C file is then excluded and the Zig object linked in its place.
 const ported_modules = [_][]const u8{
     "random.c", // -> src/random.zig (first port; PRNG)
+    "hash.c", // -> src/hash.zig (generic hash table)
+    "bitvec.c", // -> src/bitvec.zig (fixed-length bitmap)
+    "rowset.c", // -> src/rowset.zig (rowid set / forest of trees)
+    "fault.c", // -> src/fault.zig (benign-malloc fault hooks)
+    "mem1.c", // -> src/mem1.zig (default system-malloc allocator)
 };
 
 pub fn build(b: *std.Build) void {

@@ -58,14 +58,26 @@ patterns (error handling, allocator strategy, C-ABI shims, test parity).
 
 - [x] `random.c` — PRNG → `src/random.zig` (+ `src/chacha.zig`). First port;
       proves the swap mechanism. ChaCha20 verified against the RFC 7539 vector.
-- [ ] `hash.c` / `hash.h` — internal hash table
-- [ ] `bitvec.c` — bitmap
-- [ ] `rowset.c` — row-id sets
+- [x] `hash.c` — internal hash table → `src/hash.zig`. ABI-shared structs
+      (`Hash`/`HashElem`/`_ht`) kept via `extern struct`; TCL suite green.
+- [x] `bitvec.c` — bitmap → `src/bitvec.zig`. Opaque struct (only `sizeof==512`
+      is ABI-relevant); `bitvec.test` (BuiltinTest harness) green.
+- [x] `rowset.c` — row-id sets → `src/rowset.zig`. Opaque forest-of-trees;
+      `sqlite3RowSetDelete` address-compared in vdbemem.c. where/in tests green.
+- [x] `fault.c` — benign-malloc fault hooks → `src/fault.zig`. Tiny leaf; the
+      hook vector other modules toggle around recoverable allocs.
+- [x] `mem1.c` — default system-malloc allocator → `src/mem1.zig`. The
+      `sqlite3_mem_methods` drivers now back **every** allocation in the engine
+      (size-prefix strategy, matching the no-`malloc_usable_size` config).
+      memsubsys1/malloc5 green; full cross-subsystem suite green.
 - [ ] `printf.c` — sqlite3-internal formatting (xprintf)
-- [ ] `utf.c` — UTF-8/16 conversions
-- [ ] `mem*.c` — allocators (`mem0/1/2/3/5`), `malloc.c`, `status.c`
+- [ ] `utf.c` — UTF-8/16 conversions (needs the `Mem` struct mirrored — defer
+      until VDBE `Mem` layout is pinned down)
+- [ ] `mem2/3/5.c`, `malloc.c`, `status.c` — rest of the allocator stack
+      (`status.c` deferred: `sqlite3_db_status64` reaches deep into connection
+      internals — not a clean leaf)
 - [ ] `mutex*.c` — mutex backends (start with `mutex_noop`, then `mutex_unix`)
-- [ ] `global.c`, `ctime.c`, `fault.c`
+- [ ] `global.c`, `ctime.c`
 
 **Exit criteria:** these modules are Zig; suite green; porting playbook written.
 
@@ -164,3 +176,7 @@ full `testrunner.tcl full` green.
 
 - 2026-06-24: Repo scaffolding — `CLAUDE.md`, `plan.md`, `token-count.md`
   created. No code yet. Phase 0 not started.
+- 2026-06-25: Phase 0 done (build foundation + TCL wiring); first port random.c.
+- 2026-06-26: Phase 1 leaf ports — hash.c, bitvec.c, rowset.c, fault.c, mem1.c
+  to Zig (6 modules). Functional + broad TCL suites green with Zig objects
+  linked in. Allocator (`mem1`) now backs all engine allocations.

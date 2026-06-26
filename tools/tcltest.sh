@@ -35,17 +35,27 @@ mkdir -p "$GEN"
 cd "$GEN"
 [ -f Makefile ] || "$UPSTREAM/configure" --dev --with-tcl="$TCLDIR" >configure.log 2>&1
 
-# 2. Build the baseline testfixture.
+# 2. Build the baseline testfixture. Remove it first so the link command is
+# always logged (make is otherwise silent when the binary is up to date), which
+# step 3 reconstructs to swap in the Zig objects.
+rm -f testfixture
 make testfixture >make_tf.log 2>&1
 FIXTURE=./testfixture
 
 # 3. Optionally relink with our Zig object(s) swapping the matching C file(s).
+# MODULES lists every ported module stem; keep in sync with `ported_modules`
+# in build.zig. Each <stem>.zig is compiled to <stem>_zig.o and swapped in for
+# the upstream src/<stem>.c in the testfixture link command.
+MODULES=(random hash bitvec rowset fault mem1)
 if [ "$ZIG" = 1 ]; then
-  zig build-obj -fPIC -fno-stack-check -OReleaseSafe "$PROJ/src/random.zig" -femit-bin=random_zig.o
-  # reconstruct the testfixture link command, swap src/random.c -> random_zig.o
-  python3 - "$UPSTREAM" <<'PY'
+  for m in "${MODULES[@]}"; do
+    zig build-obj -fPIC -fno-stack-check -OReleaseSafe "$PROJ/src/$m.zig" -femit-bin="${m}_zig.o"
+  done
+  # reconstruct the testfixture link command, swapping each src/<m>.c -> <m>_zig.o
+  python3 - "$UPSTREAM" "${MODULES[@]}" <<'PY'
 import re, sys
 up = sys.argv[1]
+mods = sys.argv[2:]
 lines = open('make_tf.log').read().split('\n')
 cmds, cur = [], []
 for ln in lines:
@@ -54,7 +64,8 @@ for ln in lines:
 if cur: cmds.append(' '.join(cur))
 cmd = [c for c in cmds if '-o testfixture ' in c and 'cc ' in c][-1]
 cmd = re.sub(r'^.*?exit \$\?;\s*', '', cmd)
-cmd = cmd.replace(up + '/src/random.c', 'random_zig.o')
+for m in mods:
+    cmd = cmd.replace(up + '/src/%s.c' % m, '%s_zig.o' % m)
 cmd = cmd.replace('-o testfixture ', '-o testfixture_zig ')
 open('relink_zig.sh','w').write('#!/bin/bash\nset -e\nset -a; . ./.tclenv.sh; set +a\n'+cmd+'\n')
 PY

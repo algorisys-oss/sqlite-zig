@@ -4,12 +4,44 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 0 done; Phase 1 started (1 module ported)
+## Current status: Phase 0 done; Phase 1 in progress (6 modules ported)
 
 A Zig build system compiles upstream SQLite C (v3.54.0) into a static
-`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. The first
-module — `random.c` — is now **ported to Zig** and linked in place of the C
-version, proving the swap mechanism end-to-end.
+`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Six leaf
+utilities are now **ported to Zig** and linked in place of their C versions:
+`random.c`, `hash.c`, `bitvec.c`, `rowset.c`, `fault.c`, `mem1.c`. Each passes
+the functional gate (`zig build test`) and SQLite's own TCL `testfixture` suite
+with the Zig objects swapped in. Notably the Zig `mem1` allocator now backs
+**every** allocation in the engine, validated across a broad cross-subsystem run
+(memsubsys1, malloc5, pragma, index, trigger1, fkey1, json101, savepoint,
+attach, collate1, analyze, where, func, …).
+
+### Ports so far (src/*.zig; listed in `ported_modules` in build.zig)
+- `random.c` → `src/random.zig` (+ `src/chacha.zig`) — PRNG; first port.
+- `hash.c` → `src/hash.zig` — generic hash table. ABI-shared structs
+  (`Hash`/`HashElem`/`_ht`) kept as `extern struct` (C callers reach in via the
+  `sqliteHashFirst/Next/Data/Count` macros). TCL: select1/func/collate1/trigger1.
+- `bitvec.c` → `src/bitvec.zig` — fixed-length bitmap. `Bitvec` is opaque, so
+  only `sizeof==BITVEC_SZ(512)` is ABI-relevant (asserted at comptime). Full
+  three-representation layout (bitmap / hash / recursive sub-vecs) +
+  `sqlite3BitvecBuiltinTest`. TCL: `bitvec.test` (72 tests via the self-test).
+- `rowset.c` → `src/rowset.zig` — rowid set (forest of balanced trees). Opaque
+  struct; `sqlite3RowSetDelete`'s address is compared in vdbemem.c, so it is
+  exported. TCL: where/where2/where9/in (the OR-optimization exercises RowSet).
+- `fault.c` → `src/fault.zig` — benign-malloc fault hooks. Tiny static hook
+  vector (`sqlite3BenignMallocHooks`/`Begin`/`End`). TCL: memory tests green.
+- `mem1.c` → `src/mem1.zig` — default system-malloc allocator (the
+  `sqlite3_mem_methods` drivers). Only `sqlite3MemSetDefault` is external; the
+  rest register via `sqlite3_config(SQLITE_CONFIG_MALLOC,…)`. Uses the
+  size-prefix strategy (alloc `n+8`, stash size) — both this project's `zig
+  build` and the testfixture lack `HAVE_MALLOC_USABLE_SIZE`, so this matches the
+  active C path exactly. TCL: memsubsys1/malloc5 + full cross-subsystem run.
+
+### Validating ports against the TCL suite
+`tools/tcltest.sh --zig [tests...]` relinks upstream `testfixture` with every
+ported Zig object swapped in for its C counterpart. The list of ported stems is
+the `MODULES=(...)` array in that script — **keep it in sync with
+`ported_modules` in build.zig** when adding a port.
 
 ### First port: random.c → src/random.zig (+ src/chacha.zig)
 - C `random.c` is excluded from the build (via `ported_modules` in build.zig);
@@ -31,7 +63,7 @@ version, proving the swap mechanism end-to-end.
       `geopoly.c` [#include'd by rtree.c], `shell.c` [CLI], `tclsqlite-ex.c` [tcl])
 - [x] [build.zig](build.zig): split build (default) + amalgamation mode
       (`-Damalgamation=true`); static lib + shell; `run`/`smoke`/`test` steps;
-      per-file C→Zig swap mechanism (`ported_modules` list — currently empty).
+      per-file C→Zig swap mechanism (`ported_modules` list).
 - [x] Verified: `zig build`, `zig build test`, `zig build smoke` all green in
       BOTH split and amalgamation modes. `test/functional.sql` exercises core
       DML, indexes, transactions, joins, triggers, math funcs, JSON, FTS5, rtree.
@@ -50,15 +82,19 @@ version, proving the swap mechanism end-to-end.
 
 ### Not done yet (next)
 - [ ] Run the **broader** suite (`testrunner.tcl` / `veryquick` / `make
-      devtest`), not just the 4-file smoke set, and wire it as a `zig build`
-      step or CI script.
-- [ ] Continue Phase 1 leaf-utility ports (hash.c, bitvec.c, rowset.c, …).
+      devtest`) under `--zig`, not just hand-picked files, and wire it as a `zig
+      build` step or CI script.
+- [ ] Continue Phase 1 leaf ports. Good next candidates: `printf.c` (xprintf —
+      self-contained but large), `mutex_noop.c`/`mutex.c`, `global.c`,
+      `ctime.c`. Deferred (need core structs first): `utf.c` and `status.c`'s
+      `db_status` reach into the `Mem`/connection layouts.
 
 ## How to resume
 
 ```bash
 cd /home/rajesh/lab/ai-port/sqlite-zig
-zig build test        # should be green (100% C baseline)
+zig build test        # green: functional suite with 6 Zig modules swapped in
+tools/tcltest.sh --zig select1 func bitvec where   # green: TCL suite, Zig objs
 ```
 
 If `vendor/` is missing or upstream is bumped, regenerate it:
@@ -83,11 +119,28 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
 2. Write `src/<name>.zig` exporting the **same C-ABI symbols** (use
    `export fn`, match signatures from `sqliteInt.h`). It must satisfy every
    caller that still links the C side.
-3. Add `"<name>.c"` to `ported_modules` in [build.zig](build.zig).
+3. Add `"<name>.c"` to `ported_modules` in [build.zig](build.zig), AND add the
+   stem to `MODULES=(...)` in [tools/tcltest.sh](tools/tcltest.sh) so the TCL
+   relink swaps it in too.
 4. `zig build test` — must stay green. Add targeted cases to
-   `test/functional.sql` (regenerate `test/functional.expected`) and, once
-   wired, run the TCL suite.
+   `test/functional.sql` (regenerate `test/functional.expected`) and run the TCL
+   suite: `tools/tcltest.sh --zig <relevant tests>` (0 errors required).
 5. Update this file's checklist + [plan.md](plan.md) + log tokens.
+
+### Porting playbook (patterns established so far)
+- **ABI-shared struct** (defined in a header other C reads, e.g. `Hash`): mirror
+  it as a Zig `extern struct` field-for-field.
+- **Opaque struct** (defined only in the `.c`, others hold a pointer, e.g.
+  `Bitvec`/`RowSet`): layout is internal; only allocation `sizeof` invariants
+  matter — assert them at comptime.
+- **Whole-file swap**: you must provide *every* exported symbol of the `.c`
+  (incl. test-only ones like `sqlite3BitvecBuiltinTest` when `SQLITE_UNTESTABLE`
+  is off). Symbols only referenced under `SQLITE_DEBUG` with no external callers
+  (e.g. `sqlite3ShowBitvec`) can be omitted — verify with a tree-wide grep.
+- **Config divergence**: the `zig build` library and the `--dev` testfixture use
+  different flags (e.g. testfixture has `SQLITE_DEBUG`). One Zig object serves
+  both, so port the behavior that is identical across configs, or the production
+  one when a macro like `SQLITE_NOMEM_BKPT` only differs in debug bookkeeping.
 
 ## Key facts / gotchas discovered
 - Outside the amalgamation, `SQLITE_PRIVATE` expands to empty → symbols are
@@ -107,3 +160,11 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
 - 2026-06-25: Phase 0 build foundation landed — vendored sources, build.zig
   (split + amalgamation), `zig build test` green in both modes. Next:
   TCL suite integration, then first real port (random.c).
+- 2026-06-25: First port — `random.c` → `src/random.zig` (+ chacha). TCL
+  testfixture wiring + `tools/tcltest.sh`.
+- 2026-06-26: Phase 1 batch — ported `hash.c`, `bitvec.c`, `rowset.c`,
+  `fault.c`, `mem1.c` to Zig (6 modules total). Generalized `tcltest.sh` to
+  swap all ported objects (`MODULES` array). The Zig `mem1` allocator now backs
+  every allocation in the engine. Validated green on the functional gate and a
+  broad TCL run (memsubsys1, malloc5, pragma, index, trigger1, fkey1, json101,
+  savepoint, attach, collate1, analyze, where, func, bitvec, select1, in, …).
