@@ -4,10 +4,10 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 0 done; Phase 1 in progress (24 modules ported)
+## Current status: Phase 0 done; Phase 1 in progress (25 modules ported)
 
 A Zig build system compiles upstream SQLite C (v3.54.0) into a static
-`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Twenty-four
+`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Twenty-five
 modules are now **ported to Zig**: `random.c`, `hash.c`, `bitvec.c`, `rowset.c`,
 `fault.c`, `mem1.c`, `complete.c`, `memjournal.c`, `fts3_hash.c`, `utf.c` (first
 **core-struct-coupled** module), `os.c` (VFS dispatch — every file I/O now Zig),
@@ -196,6 +196,12 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   one when a macro like `SQLITE_NOMEM_BKPT` only differs in debug bookkeeping.
 
 ## Key facts / gotchas discovered
+- A mutable C global read from Zig must be declared `extern var`, NOT
+  `extern const`, even if Zig only reads it. `const` lets the ReleaseSafe
+  optimizer assume the memory never changes and CSE a read across an opaque C
+  call that mutates it (observed: `sqlite3Config.pcache2` stale after
+  `sqlite3PCacheSetDefault`, crashing `sqlite3PcacheInitialize`). Production
+  Debug builds dodge it; the testfixture ReleaseSafe objects expose it.
 - Outside the amalgamation, `SQLITE_PRIVATE` expands to empty → symbols are
   visible across TUs, so separate compilation + cross-TU linking works.
 - `-DSQLITE_CORE=1` is **required** for the split build, else bundled extensions
@@ -259,6 +265,13 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   Vdbe + sqlite3 fields at offsets, mirrors StrAccum) and legacy.c (sqlite3_exec;
   now driven by test/engine_test.zig). TCL trace/trace2/capi3(250)/exec/main
   green. 24 modules.
+- 2026-06-26: Agent wave 5 — pcache.c (page-cache dispatch; first Phase-3 storage
+  module). PgHdr mirrored (ABI-shared) with offset asserts; PCache kept internal
+  (opaque). Fixed a latent optimizer bug: `sqlite3Config` is a MUTABLE global but
+  was declared `extern const`, letting ReleaseSafe CSE a read across an opaque
+  mutation (crashed sqlite3PcacheInitialize in the testfixture) — changed to
+  `extern var` in pcache/os/mem5/threads/mutex. TCL pcache/pcache2/pager1(1373)
+  green. 25 modules.
 
 ### Resume guide — continuing the agent-parallelized migration
 The authoritative ordered list of ported modules (with one-line descriptions) is
