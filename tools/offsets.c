@@ -401,6 +401,8 @@ int main(void) {
     P(sqlite3_context, iOp);
     P(sqlite3_context, isError);
     P(sqlite3_context, enc);
+    P(sqlite3_context, skipFlag);
+    SZ(StrAccum, sqlite3_str);
     SZ(AuxData, AuxData);
     P(AuxData, iAuxOp);
     P(AuxData, iAuxArg);
