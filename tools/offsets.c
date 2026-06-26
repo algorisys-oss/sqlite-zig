@@ -541,5 +541,87 @@ int main(void) {
     P(Window, regEndRowid);
     P(Window, bExprArgs);
     P(FuncDef, xSFunc);
+
+    /* ── build.c (src/build.zig) ─────────────────────────────────────────── */
+    /* Parse */
+    P(Parse, sNameToken);
+    P(Parse, sLastToken);
+    P(Parse, cookieMask);
+    P(Parse, writeMask);
+    P(Parse, nSelect);
+    P(Parse, nVtabLock);
+    P(Parse, iPkSortOrder);
+    P(Parse, pNewIndex);
+    printf("Parse_u1_cr_addrCrTab %zu\n", offsetof(struct Parse, u1.cr.addrCrTab));
+    printf("Parse_u1_cr_regRowid %zu\n", offsetof(struct Parse, u1.cr.regRowid));
+    printf("Parse_u1_cr_regRoot %zu\n", offsetof(struct Parse, u1.cr.regRoot));
+    printf("Parse_u1_cr_constraintName %zu\n",
+           offsetof(struct Parse, u1.cr.constraintName));
+    printf("Parse_u1_d_pReturning %zu\n", offsetof(struct Parse, u1.d.pReturning));
+
+    /* Token */
+    P(Token, z);
+    P(Token, n);
+    SZ(Token, Token);
+
+    /* Returning */
+    P(Returning, pParse);
+    P(Returning, zName);
+    P(Returning, retTStep);
+    SZ(Returning, Returning);
+
+    /* Table extra */
+    P(Table, nRowLogEst);
+    P(Table, szTabRow);
+    P(Table, aHx);
+    printf("Table_u_tab_addColOffset %zu\n",
+           offsetof(struct Table, u.tab.addColOffset));
+    printf("Table_u_view_pSelect %zu\n", offsetof(struct Table, u.view.pSelect));
+    printf("Table_u_vtab_azArg %zu\n", offsetof(struct Table, u.vtab.azArg));
+
+    /* Column extra */
+    P(Column, szEst);
+    P(Column, hName);
+
+    /* Index extra */
+    P(Index, aiRowLogEst);
+    P(Index, szIdxRow);
+    P(Index, colNotIdxed);
+
+    /* FKey extra (FKeyCol is anonymous 'struct sColMap') */
+
+    /* SrcList / SrcItem extra */
+    P(SrcList, nAlloc);
+    P(SrcItem, zAlias);
+    SZ(SrcList, SrcList);
+
+    /* IdList */
+    P(IdList, nId);
+    P(IdList, a);
+    SZ(IdList, IdList);
+
+    /* KeyInfo */
+    P(KeyInfo, aColl);
+    P(KeyInfo, nAllField);
+    SZ(KeyInfo, KeyInfo);
+
+    /* Sqlite3Config.bExtraSchemaChecks (read by sqlite3CheckObjectName) */
+    P(Sqlite3Config, bExtraSchemaChecks);
+
+    /* SelectDest (build.c EndTable AS-SELECT path) */
+    P(SelectDest, iSDParm);
+    P(SelectDest, iSdst);
+    P(SelectDest, nSdst);
+
+    /* Module + sqlite3_module — shadow-table machinery */
+    P(Module, pEpoTab);
+    printf("sqlite3_module_iVersion %zu\n", offsetof(sqlite3_module, iVersion));
+    printf("sqlite3_module_xShadowName %zu\n", offsetof(sqlite3_module, xShadowName));
+
+    /* With */
+    P(Cte, pCols);
+    P(Cte, zName);
+    P(Cte, eM10d);
+
     return 0;
 }
