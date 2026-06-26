@@ -12,6 +12,7 @@
 */
 #include "sqliteInt.h"
 #include "vdbeInt.h"
+#include "vdbe.h"
 #include <stdio.h>
 #include <stddef.h>
 
@@ -32,10 +33,23 @@ int main(void) {
     P(sqlite3_value, zMalloc);
     P(sqlite3_value, xDel);
 
-    /* sqlite3 connection — utf.c reads db->mallocFailed; table.c writes db->errCode. */
+    /* sqlite3 connection — utf.c reads db->mallocFailed; table.c writes db->errCode;
+    ** vdbetrace.c reads db->enc/nVdbeExec/aLimit. */
     SZ(sqlite3, sqlite3);
     P(sqlite3, mallocFailed);
     P(sqlite3, errCode);
+    P(sqlite3, enc);
+    P(sqlite3, nVdbeExec);
+    P(sqlite3, aLimit);
+    P(sqlite3, mutex); /* legacy.c (sqlite3_exec) */
+    P(sqlite3, flags);
+    P(sqlite3, errMask);
+
+    /* Vdbe — vdbetrace.c reads db/nVar/aVar/pVList. */
+    P(Vdbe, db);
+    P(Vdbe, nVar);
+    P(Vdbe, aVar);
+    P(Vdbe, pVList);
 
     /* Sqlite3Config — os.c reads iPrngSeed; mem5.c reads nHeap/pHeap/mnReq/bMemstat. */
     SZ(Sqlite3Config, Sqlite3Config);
