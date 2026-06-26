@@ -296,10 +296,10 @@ inline fn tabETabType(p: ?*anyopaque) u8 {
     return base(p)[Table_eTabType_off];
 }
 inline fn tabIsVirtual(p: ?*anyopaque) bool {
-    return tabETabType(p) == 2; // TABTYP_VTAB
+    return tabETabType(p) == 1; // TABTYP_VTAB (sqliteInt.h: NORM=0, VTAB=1, VIEW=2)
 }
 inline fn tabIsView(p: ?*anyopaque) bool {
-    return tabETabType(p) == 1; // TABTYP_VIEW
+    return tabETabType(p) == 2; // TABTYP_VIEW
 }
 inline fn tabHasRowid(p: ?*anyopaque) bool {
     return (tabTabFlags(p) & TF_WithoutRowid) == 0;
