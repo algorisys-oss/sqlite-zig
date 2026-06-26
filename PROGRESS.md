@@ -13,23 +13,20 @@ modules are now **ported to Zig** and linked in place of their C versions:
 `memjournal.c`, `fts3_hash.c`, `utf.c` (first **core-struct-coupled** module),
 `os.c` (VFS dispatch — every file I/O now flows through Zig).
 
-The **comptime-config foundation** is in place (build.zig `-Dtestfixture`, the
-`config` options module, the `test-objs` step, and `tools/gen_layout.sh` →
-`src/c_layout.zig` ground-truth offset asserts). This unblocks modules that touch
-build-divergent internal structs — they mirror the struct with config-gated
-layout and assert correctness at comptime. See
-[docs/architecture.md](docs/architecture.md).
 Each passes the functional gate (`zig build test`) and SQLite's own TCL
 `testfixture` suite with the Zig objects swapped in. Notably the Zig `mem1`
-allocator now backs **every** allocation in the engine, validated across a broad
-cross-subsystem run (memsubsys1, malloc5, pragma, index, trigger1, fkey1,
-json101, savepoint, attach, collate1, analyze, where, func, …).
+allocator now backs **every** allocation in the engine, and `os.c` means every
+file I/O dispatches through Zig.
 
-> **Why progress now slows:** the remaining modules couple to *build-divergent*
-> internal structs (`Mem`, `sqlite3`, `Sqlite3Config`). The `zig build` and
-> `--dev` testfixture configs differ (SQLITE_DEBUG/TEST + ~30 flags), so a single
-> Zig object can't satisfy both for config-dependent modules. The unblock is a
-> comptime config foundation — see [docs/architecture.md](docs/architecture.md).
+The **comptime-config foundation** is in place (build.zig `-Dtestfixture`, the
+`config` options module, the `test-objs` step, and `tools/gen_layout.sh` →
+`src/c_layout.zig` ground-truth offset asserts). This is the unblock for modules
+that couple to *build-divergent* internal structs (`Mem`, `sqlite3`,
+`Sqlite3Config`): the production `zig build` and the `--dev` testfixture differ
+by ~33 `-D` flags, so a single Zig object can only satisfy both by mirroring the
+struct with config-gated layout and asserting it at comptime against C ground
+truth. `utf.c` (Mem) and `os.c` (Sqlite3Config.iPrngSeed) are ported this way.
+See [docs/architecture.md](docs/architecture.md).
 
 ### Ports so far (src/*.zig; listed in `ported_modules` in build.zig)
 - `random.c` → `src/random.zig` (+ `src/chacha.zig`) — PRNG; first port.
