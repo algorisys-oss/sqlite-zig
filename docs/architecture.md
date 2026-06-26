@@ -77,22 +77,44 @@ Ported under this rule: `random`, `hash`, `bitvec`, `rowset`, `fault`, `mem1`,
 - `mutex.c` / `malloc.c` / the storage & VDBE layers — pervasive internal-struct
   coupling.
 
-### Recommended path forward (the "config foundation")
+### The "config foundation" — IMPLEMENTED (2026-06-26)
 
-To unblock the deeply-coupled tier, introduce a **comptime config** in Zig that
-mirrors the C `-D` flags, compiled per-target-build (exactly as C uses `-D`):
+To unblock the deeply-coupled tier, a **comptime config** in Zig mirrors the C
+`-D` flags, compiled per-target-build (exactly as C uses `-D`):
 
-- `build.zig` exposes a `config` options module; a `-Dtestfixture=true` flips the
-  flag set to the testfixture's (SQLITE_DEBUG, SQLITE_TEST, …).
-- Ported Zig modules gate debug-only struct fields and test-only code on those
-  comptime flags, so each emitted object matches the build it is linked into.
-- `tcltest.sh` consumes objects emitted with the testfixture flag set (e.g. via a
-  dedicated `zig build` step) instead of a bare `zig build-obj`.
+- `build.zig` exposes a `config` options module (`@import("config")` →
+  `sqlite_debug`, `sqlite_test`). `-Dtestfixture=true` flips them on.
+- Each ported object imports `config`; a `test-objs` build step emits the objects
+  with the chosen config (ReleaseSafe+PIC). `tcltest.sh --zig` runs
+  `zig build test-objs -Dtestfixture=true` and links those, so each object's
+  struct layout / test instrumentation matches the build it links against.
 
-Until that exists, prefer config-invariant leaves. `@cImport`/`zig translate-c`
-were evaluated for auto-importing `sqliteInt.h` to get exact layouts — both fail
-(`@cImport` is removed in this Zig; `translate-c` chokes on the header's macros),
-so struct mirrors remain manual and the config foundation is the real unlock.
+#### Provably-correct struct mirrors (no silent corruption)
+
+`@cImport`/`zig translate-c` can't auto-import `sqliteInt.h` (`@cImport` is
+removed in this Zig; `translate-c` chokes on the macros), so mirrors are manual.
+To make them *safe*, layout is verified against **C ground truth**:
+
+- `tools/offsets.c` prints `offsetof`/`sizeof` for the needed structs.
+- `tools/gen_layout.sh` compiles it under BOTH configs (production + `--dev`
+  testfixture) and generates [../src/c_layout.zig](../src/c_layout.zig) with the
+  numbers, selected at comptime by `config.sqlite_debug`.
+- Each Zig struct mirror has `comptime` `@offsetOf`/`@sizeOf` asserts against
+  those numbers. **A wrong mirror fails to compile** in the affected config —
+  it can never silently corrupt memory.
+
+This also corrected a mistaken assumption: `Sqlite3Config.iPrngSeed` and
+`sqlite3.mallocFailed` turned out to be at *config-invariant* offsets (the
+ground-truth extractor showed `SQLITE_DEBUG`'s early `bJsonSelfcheck` is absorbed
+by padding). Only `sizeof(Mem)` actually moves (56 → 72); its field offsets are
+invariant. Reason about layout from the extractor, not from reading the structs.
+
+**First module on this foundation:** `utf.c` → `src/utf.zig` (mirrors `Mem` with
+a config-gated tail; reads `db->mallocFailed` at its ground-truth offset).
+Validated by enc/enc2/enc3/enc4 in the testfixture (debug) config.
+
+Regenerate `src/c_layout.zig` (after adding fields to `tools/offsets.c` or
+bumping the vendored sources): `tools/gen_layout.sh`.
 
 ### Note on the `SQLITE_NOMEM_BKPT`-style macros
 

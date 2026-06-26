@@ -61,6 +61,7 @@ const ported_modules = [_][]const u8{
     "complete.c", // -> src/complete.zig (sqlite3_complete SQL tokenizer)
     "memjournal.c", // -> src/memjournal.zig (in-memory rollback journal)
     "fts3_hash.c", // -> src/fts3_hash.zig (FTS3 standalone hash table)
+    "utf.c", // -> src/utf.zig (UTF-8/16 translation; first Mem-coupled port)
 };
 
 pub fn build(b: *std.Build) void {

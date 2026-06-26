@@ -4,13 +4,21 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 0 done; Phase 1 in progress (9 modules ported)
+## Current status: Phase 0 done; Phase 1 in progress (10 modules ported)
 
 A Zig build system compiles upstream SQLite C (v3.54.0) into a static
-`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Nine modules
+`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Ten modules
 are now **ported to Zig** and linked in place of their C versions: `random.c`,
 `hash.c`, `bitvec.c`, `rowset.c`, `fault.c`, `mem1.c`, `complete.c`,
-`memjournal.c` (first storage-layer module), `fts3_hash.c`.
+`memjournal.c` (first storage-layer module), `fts3_hash.c`, `utf.c` (first
+**core-struct-coupled** module).
+
+The **comptime-config foundation** is in place (build.zig `-Dtestfixture`, the
+`config` options module, the `test-objs` step, and `tools/gen_layout.sh` →
+`src/c_layout.zig` ground-truth offset asserts). This unblocks modules that touch
+build-divergent internal structs — they mirror the struct with config-gated
+layout and assert correctness at comptime. See
+[docs/architecture.md](docs/architecture.md).
 Each passes the functional gate (`zig build test`) and SQLite's own TCL
 `testfixture` suite with the Zig objects swapped in. Notably the Zig `mem1`
 allocator now backs **every** allocation in the engine, validated across a broad
@@ -56,6 +64,12 @@ json101, savepoint, attach, collate1, analyze, where, func, …).
   BINARY key classes, optional key-copy). ABI-shared structs like `hash.c`;
   config-invariant (sqlite3_malloc64/free + libc compare). TCL:
   fts3aa/fts3ab/fts3expr/fts3near/fts3query/fts4aa.
+- `utf.c` → `src/utf.zig` — UTF-8/16/16LE/16BE translation. First module to
+  mirror a build-divergent core struct (`Mem`): field offsets are invariant but
+  sizeof moves 56→72 under SQLITE_DEBUG, matched by a config-gated tail and
+  asserted at comptime vs `src/c_layout.zig`. Reads `db->mallocFailed` at its
+  ground-truth offset. TCL: enc/enc2/enc3/enc4 (enc4 = 1115 round-trips) in the
+  testfixture (debug) config.
 
 ### Validating ports against the TCL suite
 `tools/tcltest.sh --zig [tests...]` relinks upstream `testfixture` with every
@@ -200,3 +214,9 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   structs like hash.c. TCL fts3aa/ab/expr/near/query/fts4aa green (incl.
   fts3query's 1258 assertions). Broad cross-subsystem --zig sweep also green
   (insert/select4/update/view/subquery/window1/cast/vacuum/incrblob/boundary1…).
+- 2026-06-26: Built the comptime-config foundation (build.zig `-Dtestfixture`,
+  `config` module, `test-objs` step; tcltest.sh consumes per-config objects) and
+  the ground-truth offset tooling (tools/offsets.c + gen_layout.sh →
+  src/c_layout.zig). Then ported `utf.c` on it — 10 modules; first core-struct
+  (`Mem`) coupled port, layout asserted at comptime against C. enc/enc2/enc3/enc4
+  green in the testfixture (debug) config.
