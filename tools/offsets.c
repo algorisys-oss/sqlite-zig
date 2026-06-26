@@ -13,6 +13,7 @@
 #include "sqliteInt.h"
 #include "vdbeInt.h"
 #include "vdbe.h"
+#include "btreeInt.h"
 #include <stdio.h>
 #include <stddef.h>
 
@@ -222,6 +223,13 @@ int main(void) {
     P(Upsert, pUpsertSet);
     P(Upsert, pUpsertWhere);
     P(Upsert, pNextUpsert);
+    /* backup.c — reaches into Btree/BtShared (btreeInt.h) leading fields. */
+    P(Btree, db);
+    P(Btree, pBt);
+    P(Btree, nBackup);
+    P(BtShared, inTransaction);
+    P(BtShared, btsFlags);
+    P(BtShared, pageSize);
     /* sqlite3.init sub-struct (sqlite3InitInfo) — nested composite offsets. */
     printf("sqlite3_init_newTnum %zu\n", offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, newTnum));
     printf("sqlite3_init_iDb %zu\n",     offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, iDb));

@@ -89,6 +89,7 @@ const ported_modules = [_][]const u8{
     "auth.c", // -> src/auth.zig (authorization callback layer)
     "vacuum.c", // -> src/vacuum.zig (VACUUM command)
     "attach.c", // -> src/attach.zig (ATTACH/DETACH + DbFixer AST walkers)
+    "backup.c", // -> src/backup.zig (online backup API + BtreeCopyFile)
 };
 
 pub fn build(b: *std.Build) void {
