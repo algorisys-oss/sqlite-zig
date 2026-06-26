@@ -49,7 +49,7 @@ FIXTURE=./testfixture
 # config (SQLITE_DEBUG/SQLITE_TEST) so struct layouts / test instrumentation
 # match the testfixture C. Each is swapped in for upstream src/<stem>.c in the
 # testfixture link command.
-MODULES=(random hash bitvec rowset fault mem1 complete memjournal fts3_hash utf os fts3_porter fts3_tokenizer1 fts3_unicode carray)
+MODULES=(random hash bitvec rowset fault mem1 complete memjournal fts3_hash utf os fts3_porter fts3_tokenizer1 fts3_unicode carray table)
 if [ "$ZIG" = 1 ]; then
   ( cd "$PROJ" && zig build test-objs -Dtestfixture=true ) >zigobjs.log 2>&1 \
     || { echo "FATAL: zig build test-objs failed"; cat zigobjs.log; exit 1; }

@@ -22,6 +22,7 @@ const prod = struct {
     pub const sqlite3_value_xDel: usize = 48;
     pub const sizeof_sqlite3: usize = 816;
     pub const sqlite3_mallocFailed: usize = 103;
+    pub const sqlite3_errCode: usize = 80;
     pub const sizeof_Sqlite3Config: usize = 440;
     pub const Sqlite3Config_iPrngSeed: usize = 432;
 };
@@ -41,6 +42,7 @@ const tf = struct {
     pub const sqlite3_value_xDel: usize = 48;
     pub const sizeof_sqlite3: usize = 816;
     pub const sqlite3_mallocFailed: usize = 103;
+    pub const sqlite3_errCode: usize = 80;
     pub const sizeof_Sqlite3Config: usize = 488;
     pub const Sqlite3Config_iPrngSeed: usize = 432;
 };

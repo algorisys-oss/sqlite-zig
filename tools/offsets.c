@@ -32,9 +32,10 @@ int main(void) {
     P(sqlite3_value, zMalloc);
     P(sqlite3_value, xDel);
 
-    /* sqlite3 connection — utf.c reads db->mallocFailed. */
+    /* sqlite3 connection — utf.c reads db->mallocFailed; table.c writes db->errCode. */
     SZ(sqlite3, sqlite3);
     P(sqlite3, mallocFailed);
+    P(sqlite3, errCode);
 
     /* Sqlite3Config — os.c reads sqlite3Config.iPrngSeed. */
     SZ(Sqlite3Config, Sqlite3Config);

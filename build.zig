@@ -67,6 +67,7 @@ const ported_modules = [_][]const u8{
     "fts3_tokenizer1.c", // -> src/fts3_tokenizer1.zig (FTS3 "simple" tokenizer)
     "fts3_unicode.c", // -> src/fts3_unicode.zig (FTS3 unicode61 tokenizer)
     "carray.c", // -> src/carray.zig (carray table-valued function / vtab)
+    "table.c", // -> src/table.zig (sqlite3_get_table / sqlite3_free_table)
 };
 
 pub fn build(b: *std.Build) void {
