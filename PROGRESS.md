@@ -25,22 +25,28 @@ connection dropped mid-task, so it was never run before integration): missing
 SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
 `sqlite3VdbeIncrWriteCounter`).
 
-### Known issues (vtab paths — tracked, not yet fixed)
+### Fixed since the vdbe.zig integration
 
-Two **virtual-table-specific** bugs remain (core SQL is unaffected and fully
-validated above). Both reproduce only on vtab writes:
+- **FTS5 write lookaside corruption** — FIXED (commit `f0c8136`). Root cause was
+  `MEMCELLSIZE` defined as 48 instead of `offsetof(Mem,db)`=24, so `OP_Variable`'s
+  `memcpy(pOut,pVar,MEMCELLSIZE)` copied past the shallow-copy prefix into the
+  `szMalloc`/`zMalloc` ownership fields → register and bound-param shared a buffer
+  → double-free. FTS5 re-enabled in `functional.sql`.
+- **`UPDATE` on a virtual table** — FIXED (commit `497a211`). `update.zig` had
+  `TABTYP_VTAB`/`VIEW` swapped, so vtabs misclassified as views and skipped the
+  one-pass `updateVirtualTable` path.
 
-1. **FTS5 write corrupts the lookaside free-list** (`vdbe.zig`). An FTS5 write
-   recurses (its `xUpdate` runs nested shadow-table SQL); under the Zig
-   interpreter this double-frees / overruns a small allocation, surfacing as a
-   `LookasideSlot` misalignment panic at the next allocation or at commit.
-   Confirmed a `vdbe.zig` regression: C interpreter + all other Zig modules works;
-   pure-C works. `functional.sql` has the FTS5 section commented out pending fix.
-2. **`UPDATE` on a virtual table generates the wrong plan** (`update.zig`, a
-   *pre-existing* codegen bug — crashes with the C interpreter too). Upstream
-   emits a one-pass vtab plan (`VOpen→VFilter→VColumn→VUpdate`); `update.zig`
-   wrongly emits the regular-table two-pass `OpenEphemeral`+`NotFound` plan, and
-   `NotFound` on the keyless ephemeral calls `AllocUnpackedRecord(NULL)` → panic.
+### Known issues (minor, tracked)
+
+- **vtab1-24.2 (`--dev`/testfixture only): FTS3 savepoint assertion.** In the
+  SQLITE_DEBUG config, `fts3SavepointMethod`'s `TESTONLY` monotonicity assert
+  (`pTab->mxSavepoint<=iSavepoint`) trips after a `SAVEPOINT/ROLLBACK TO/RELEASE`
+  cycle on an FTS3 table. **Production is byte-identical to pure-C** (rollback,
+  integrity-check, and subsequent ops all correct) — the entire savepoint path
+  (`OP_Savepoint`, the statement-journal open, `sqlite3VtabSavepoint`) matches
+  upstream and the `nStatement`/`nSavepoint` offsets are ground-truthed for both
+  configs, so this is a debug-only accounting-order discrepancy, not a
+  correctness bug. Does not affect the production engine.
 
 ### Earlier baseline
 
