@@ -30,6 +30,8 @@ extern fn sqlite3_column_double(stmt: ?*anyopaque, col: c_int) f64;
 extern fn sqlite3_column_text(stmt: ?*anyopaque, col: c_int) ?[*:0]const u8;
 extern fn sqlite3_errmsg(db: ?*anyopaque) [*:0]const u8;
 extern fn sqlite3_libversion() [*:0]const u8;
+extern fn sqlite3_get_table(db: ?*anyopaque, sql: [*:0]const u8, pazResult: *?[*]?[*:0]u8, pnRow: *c_int, pnCol: *c_int, errmsg: ?*?[*:0]u8) c_int;
+extern fn sqlite3_free_table(result: ?[*]?[*:0]u8) void;
 
 /// Thin Zig wrapper over an in-memory database connection.
 const Db = struct {
@@ -249,6 +251,62 @@ test "case expression" {
             \\FROM (SELECT -1 AS v UNION ALL SELECT 0 UNION ALL SELECT 5) ORDER BY v
         , &buf),
     );
+}
+
+test "sqlite3_get_table (the Zig-ported table.c)" {
+    var db = try Db.open();
+    defer db.close();
+    try db.exec("CREATE TABLE t(a,b); INSERT INTO t VALUES(1,'x'),(2,'y'),(3,'z')");
+    var result: ?[*]?[*:0]u8 = null;
+    var nrow: c_int = 0;
+    var ncol: c_int = 0;
+    try testing.expectEqual(SQLITE_OK, sqlite3_get_table(db.h, "SELECT a,b FROM t ORDER BY a", &result, &nrow, &ncol, null));
+    defer sqlite3_free_table(result);
+    try testing.expectEqual(@as(c_int, 3), nrow);
+    try testing.expectEqual(@as(c_int, 2), ncol);
+    // result[0..ncol] are the column headers; then nrow*ncol cells row-major.
+    const cells = result.?;
+    try testing.expectEqualStrings("a", std.mem.span(cells[0].?));
+    try testing.expectEqualStrings("b", std.mem.span(cells[1].?));
+    try testing.expectEqualStrings("1", std.mem.span(cells[2].?)); // row0,col0
+    try testing.expectEqualStrings("z", std.mem.span(cells[7].?)); // row2,col1
+}
+
+test "foreign key enforcement" {
+    var db = try Db.open();
+    defer db.close();
+    try db.exec("PRAGMA foreign_keys=ON");
+    try db.exec("CREATE TABLE parent(id INTEGER PRIMARY KEY)");
+    try db.exec("CREATE TABLE child(pid INTEGER REFERENCES parent(id))");
+    try db.exec("INSERT INTO parent VALUES(1),(2)");
+    try db.exec("INSERT INTO child VALUES(1)");
+    // Inserting a child with no matching parent must fail.
+    try testing.expectError(error.ExecFailed, db.exec("INSERT INTO child VALUES(99)"));
+    try testing.expectEqual(@as(i64, 1), try db.scalarI64("SELECT count(*) FROM child"));
+}
+
+test "view and trigger" {
+    var db = try Db.open();
+    defer db.close();
+    try db.exec("CREATE TABLE t(a,b); INSERT INTO t VALUES(1,10),(2,20),(3,30)");
+    try db.exec("CREATE VIEW v AS SELECT a, b*2 AS b2 FROM t WHERE a>1");
+    var buf: [64]u8 = undefined;
+    try testing.expectEqualStrings("2|40|3|60", try db.rows("SELECT a,b2 FROM v ORDER BY a", &buf));
+    // AFTER INSERT trigger accumulates into a log table.
+    try db.exec("CREATE TABLE log(n)");
+    try db.exec("CREATE TRIGGER tr AFTER INSERT ON t BEGIN INSERT INTO log VALUES(new.a); END");
+    try db.exec("INSERT INTO t VALUES(4,40),(5,50)");
+    try testing.expectEqual(@as(i64, 9), try db.scalarI64("SELECT sum(n) FROM log")); // 4+5
+}
+
+test "blob literals and length" {
+    var db = try Db.open();
+    defer db.close();
+    var buf: [64]u8 = undefined;
+    try testing.expectEqual(@as(i64, 3), try db.scalarI64("SELECT length(x'aabbcc')"));
+    try testing.expectEqualStrings("AABBCC", try db.scalarText("SELECT hex(x'aabbcc')", &buf));
+    try testing.expectEqual(@as(i64, 5), try db.scalarI64("SELECT length(zeroblob(5))"));
+    try testing.expectEqualStrings("blob", try db.scalarText("SELECT typeof(x'00')", &buf));
 }
 
 test "hex / typeof / cast" {
