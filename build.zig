@@ -106,6 +106,7 @@ const ported_modules = [_][]const u8{
     "resolve.c", // -> src/resolve.zig (name resolution)
     "vdbe.c", // -> src/vdbe.zig (bytecode interpreter: sqlite3VdbeExec dispatch loop)
     "func.c", // -> src/func.zig (built-in SQL scalar/aggregate functions)
+    "json.c", // -> src/json.zig (JSON1/JSONB scalar+aggregate fns + json_each/json_tree vtabs)
 };
 
 pub fn build(b: *std.Build) void {
