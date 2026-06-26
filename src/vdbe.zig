@@ -509,7 +509,11 @@ comptime {
 
 // Mem (sqlite3_value). Field offsets invariant; sizeof 56 prod / 72 debug.
 const sizeof_Mem: usize = if (@hasDecl(L, "sizeof_Mem")) L.sizeof_Mem else if (DEBUG) 72 else 56;
-const MEMCELLSIZE: usize = 48; // offsetof(Mem,zMalloc)
+// MEMCELLSIZE == offsetof(Mem,db): the "shallow copy" prefix (u,z,n,flags,
+// enc,eSubtype). OP_Variable memcpy's exactly this prefix — copying more would
+// clobber pOut's szMalloc/zMalloc with pVar's, aliasing the bound-parameter
+// buffer and double-freeing it (corrupts the lookaside free-list).
+const MEMCELLSIZE: usize = if (@hasDecl(L, "sqlite3_value_db")) L.sqlite3_value_db else 24;
 
 const Mem = extern struct {
     u: extern union { r: f64, i: i64, nZero: c_int, pPtr: ?*anyopaque },
