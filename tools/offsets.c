@@ -82,6 +82,24 @@ int main(void) {
     P(Table, eTabType);
     P(Index, zName);
     P(Index, tnum);
+    /* util.c — error/progress/identity fields on the connection + Parse/Column. */
+    P(sqlite3, pErr);
+    P(sqlite3, eOpenState);
+    P(sqlite3, iSysErrno);
+    P(sqlite3, pVfs);
+    P(sqlite3, suppressErr);
+    P(sqlite3, u1);
+    P(sqlite3, xProgress);
+    P(sqlite3, pProgressArg);
+    P(sqlite3, nProgressOps);
+    P(Parse, nErr);
+    P(Parse, zErrMsg);
+    P(Parse, pWith);
+    P(Parse, pToplevel);
+    P(Parse, nProgressSteps);
+    P(Column, zCnName);
+    P(Column, colFlags);
+    P(Sqlite3Config, xTestCallback);
 
     /* Vdbe — vdbetrace.c reads db/nVar/aVar/pVList. */
     P(Vdbe, db);

@@ -82,6 +82,7 @@ const ported_modules = [_][]const u8{
     "fts3_aux.c", // -> src/fts3_aux.zig (fts4aux auxiliary virtual table)
     "callback.c", // -> src/callback.zig (collation/function callback lookup)
     "vdbevtab.c", // -> src/vdbevtab.zig (bytecode() virtual table)
+    "util.c", // -> src/util.zig (varint, atoi/atof, error/progress helpers)
 };
 
 pub fn build(b: *std.Build) void {
