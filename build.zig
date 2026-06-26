@@ -79,6 +79,7 @@ const ported_modules = [_][]const u8{
     "pcache.c", // -> src/pcache.zig (page-cache dispatch + dirty-list mgmt)
     "pcache1.c", // -> src/pcache1.zig (default page-cache implementation)
     "printf.c", // -> src/printf.zig (xprintf / sqlite3_str formatting engine)
+    "fts3_aux.c", // -> src/fts3_aux.zig (fts4aux auxiliary virtual table)
 };
 
 pub fn build(b: *std.Build) void {
