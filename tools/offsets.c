@@ -256,6 +256,41 @@ int main(void) {
     P(FKey, aCol);
     SZ(FKeyCol, sColMap);
     P(sqlite3, xPreUpdateCallback);
+    /* fkey.c — foreign-key codegen. (Index.idxType / SrcItem.fixedSchema are
+    ** bitfields → not offsetof-able; src/fkey.zig gates those bytes itself.) */
+    P(CollSeq, zName);
+    P(Column, affinity);
+    P(Expr, affExpr);
+    P(Expr, flags);
+    printf("Expr_yTab %zu\n", offsetof(struct Expr, y.pTab));
+    P(FKey, pFrom);
+    P(FKey, zTo);
+    P(FKey, pNextTo);
+    P(FKey, pPrevTo);
+    P(FKey, isDeferred);
+    P(FKey, aAction);
+    P(FKey, apTrigger);
+    printf("Table_u_tab_pFKey %zu\n", offsetof(struct Table, u.tab.pFKey));
+    P(Table, nTabRef);
+    P(Index, azColl);
+    P(Index, onError);
+    P(Index, pPartIdxWhere);
+    P(NameContext, pParse);
+    P(NameContext, pSrcList);
+    P(Parse, isMultiWrite);
+    P(Schema, fkeyHash);
+    P(SrcItem, zName);
+    P(Trigger, op);
+    P(Trigger, pWhen);
+    P(Trigger, step_list);
+    SZ(Trigger, Trigger);
+    P(TriggerStep, op);
+    P(TriggerStep, pTrig);
+    SZ(TriggerStep, TriggerStep);
+    P(TriggerPrg, pTrigger);
+    P(sColMap, iFrom);
+    P(sColMap, zCol);
+    SZ(sColMap, sColMap);
     /* sqlite3.init sub-struct (sqlite3InitInfo) — nested composite offsets. */
     printf("sqlite3_init_newTnum %zu\n", offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, newTnum));
     printf("sqlite3_init_iDb %zu\n",     offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, iDb));
