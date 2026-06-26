@@ -93,7 +93,12 @@ The interface to the host. Port the Unix path first; defer Windows.
 
 - [ ] `os.c` (VFS dispatch), `os.h`, `os_common.h`
 - [ ] `os_unix.c` (file I/O, locking, mmap) — large, ~296 KB
-- [ ] `memdb.c`, `memjournal.c` — in-memory VFS/journal
+- [x] `memjournal.c` — in-memory rollback journal → `src/memjournal.zig`.
+      Config-invariant: own opaque structs + the public `sqlite3_file`/
+      `sqlite3_io_methods`/`sqlite3_vfs` ABI; `sqlite3JournalCreate` is
+      ATOMIC_WRITE-gated (off) so omitted. Validated incl. the spill-to-disk
+      path: jrnlmode/savepoint/trigger2/fkey2 (statement journals) green.
+- [ ] `memdb.c` — in-memory VFS
 - [ ] (defer) `os_win.c`, `os_kv.c`
 
 **Exit criteria:** Zig VFS backs all I/O on Linux; suite green.

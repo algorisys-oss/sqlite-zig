@@ -59,6 +59,7 @@ const ported_modules = [_][]const u8{
     "fault.c", // -> src/fault.zig (benign-malloc fault hooks)
     "mem1.c", // -> src/mem1.zig (default system-malloc allocator)
     "complete.c", // -> src/complete.zig (sqlite3_complete SQL tokenizer)
+    "memjournal.c", // -> src/memjournal.zig (in-memory rollback journal)
 };
 
 pub fn build(b: *std.Build) void {
