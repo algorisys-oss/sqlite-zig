@@ -37,21 +37,24 @@
     note:   figures are through the last recorded step; re-run the script next
             session to capture this turn's tail.
 
-[2026-06-26] 09:56:32-(in progress)  6 turns  ->  TOTAL=235197833  (cum=261683338)
+[2026-06-26] 09:56:32-13:30:06 (in progress)  10 turns  ->  TOTAL=329932069  (cum=356417574)
+    elapsed: ~3h33m wall clock so far (turn 10 = current, partial).
     prompt: Free for 8 hours; do the SQLite C->Zig migration (full autonomy,
             uninterrupted, spawn as many agents as needed). Also: test against
-            SQLite's test cases AND port test cases to Zig; document decisions.
-    note:   Marathon agent-parallelized session. Ported 23 modules to Zig this
-            session (24 total): random+hash+bitvec+rowset+fault+mem1+complete+
+            SQLite's test cases AND port test cases to Zig; build a sample blog
+            DB + a Zig script to create it; document decisions; log time+tokens.
+    note:   Marathon agent-parallelized session. Ported 24 modules to Zig this
+            session (25 total): random+hash+bitvec+rowset+fault+mem1+complete+
             memjournal+fts3_hash+utf+os+fts3_porter+fts3_tokenizer1+fts3_unicode+
             carray+table+fts3_unicode2+threads+mutex_noop+mem5+stmt+mutex+
-            vdbetrace+legacy. Built the comptime-config foundation + ground-truth
-            offset tooling (tools/offsets.c + gen_layout.sh -> src/c_layout.zig)
-            so build-divergent core structs (Mem/sqlite3/Sqlite3Config/Vdbe) are
-            mirrored provably-correctly. Added a Zig-native engine test suite
-            (test/engine_test.zig). Scaled via background sub-agent waves (each
-            writes one src/<name>.zig; orchestrator owns shared files +
-            validation + commits). docs/architecture.md records the decisions.
-            Turn 6 is in progress; re-run the script next session for its tail.
+            vdbetrace+legacy+pcache. Built the comptime-config foundation +
+            ground-truth offset tooling (tools/offsets.c + gen_layout.sh ->
+            src/c_layout.zig, 91 entries) so build-divergent core structs
+            (Mem/sqlite3/Sqlite3Config/Vdbe/PgHdr) are mirrored provably-correctly.
+            Caught a real optimizer bug (extern const vs var on a mutable global).
+            Added a Zig-native engine test suite (test/engine_test.zig) + a sample
+            blog DB (sampledata/, `zig build sample`). Scaled via background
+            sub-agent waves; orchestrator owns shared files + validation + commits.
+            Turn 10 is in progress; re-run the script next session for its tail.
 
-# Session actual total so far (cumulative): 261,683,338 tokens.
+# Session actual total so far (cumulative): 356,417,574 tokens.

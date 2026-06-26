@@ -11,6 +11,11 @@ zig-out/bin/sqlite3 sampledata/blog.db ".read sampledata/blog_schema.sql"
 zig-out/bin/sqlite3 sampledata/blog.db ".read sampledata/blog_seed.sql"
 ```
 
+## Build it from Zig (programmatically)
+```sh
+zig build sample          # compiles+runs sampledata/blog_build.zig
+```
+
 ## Try it
 ```sh
 zig-out/bin/sqlite3 sampledata/blog.db          # interactive shell
