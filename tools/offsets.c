@@ -339,6 +339,23 @@ int main(void) {
     P(TriggerStep, orconf);
     P(TriggerStep, pIdList);
     P(TriggerStep, zSpan);
+    /* walker.c — generic Expr/Select AST traversal. */
+    P(Expr, y);
+    P(Select, pWhere);
+    P(Select, pGroupBy);
+    P(Select, pHaving);
+    P(Select, pOrderBy);
+    P(Select, pPrior);
+    P(Select, pLimit);
+    P(Select, pWinDefn);
+    P(SrcItem, u1);
+    P(Subquery, pSelect);
+    P(Window, pPartition);
+    P(Window, pOrderBy);
+    P(Window, pStart);
+    P(Window, pEnd);
+    P(Window, pNextWin);
+    P(Window, pFilter);
     /* vdbeapi.c — public step/column/bind/result API. Vdbe trailing fields
     ** DIVERGE prod/tf (SQLITE_DEBUG inserts rcApp/nWrite/napArg); gen_layout
     ** emits per-config values. Vdbe.rcApp (debug-only) + the .bits bitfield byte
