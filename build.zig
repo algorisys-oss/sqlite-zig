@@ -90,6 +90,7 @@ const ported_modules = [_][]const u8{
     "vacuum.c", // -> src/vacuum.zig (VACUUM command)
     "attach.c", // -> src/attach.zig (ATTACH/DETACH + DbFixer AST walkers)
     "backup.c", // -> src/backup.zig (online backup API + BtreeCopyFile)
+    "date.c", // -> src/date.zig (date/time SQL functions)
 };
 
 pub fn build(b: *std.Build) void {
