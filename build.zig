@@ -96,6 +96,7 @@ const ported_modules = [_][]const u8{
     "trigger.c", // -> src/trigger.zig (trigger machinery + sub-program codegen)
     "pager.c", // -> src/pager.zig (pager: page txns, rollback journal, savepoints)
     "wal.c", // -> src/wal.zig (write-ahead log)
+    "vdbemem.c", // -> src/vdbemem.zig (Mem cell / sqlite3_value operations)
 };
 
 pub fn build(b: *std.Build) void {
