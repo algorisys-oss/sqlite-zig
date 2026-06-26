@@ -88,6 +88,7 @@ const ported_modules = [_][]const u8{
     "prepare.c", // -> src/prepare.zig (sqlite3_prepare* + schema init)
     "auth.c", // -> src/auth.zig (authorization callback layer)
     "vacuum.c", // -> src/vacuum.zig (VACUUM command)
+    "attach.c", // -> src/attach.zig (ATTACH/DETACH + DbFixer AST walkers)
 };
 
 pub fn build(b: *std.Build) void {
