@@ -161,10 +161,13 @@ Tokenizer → parser → code generator → optimizer. Depends on VDBE.
       generating C `parse.c` and call it via ABI, (b) port the Lemon-generated
       table-driven parser to Zig, or (c) port the `lemon` generator itself.
       Recommend (a) first, then (b). **Decision pending — flag for user.**
-- [ ] Code generators: `expr.c`, `build.c`, `select.c`, `insert.c`, `update.c`,
-      `delete.c`, `where*.c` (optimizer), `resolve.c`, `walker.c`, `attach.c`,
-      `trigger.c`, `fkey.c`, `vtab.c`, `analyze.c`, `pragma.c`, `vacuum.c`,
-      `alter.c`, `auth.c`
+- [x] `vtab.c` (virtual-table object mgmt) → `src/vtab.zig`. `auth.c` →
+      `src/auth.zig`. `vacuum.c` → `src/vacuum.zig`. `attach.c` (+ the DbFixer
+      schema-fixer AST walkers) → `src/attach.zig`. (Done ahead of the rest of
+      Phase 5; they sit on the already-ported prepare/callback/util layer.)
+- [ ] Remaining code generators: `expr.c`, `build.c`, `select.c`, `insert.c`,
+      `update.c`, `delete.c`, `where*.c` (optimizer), `resolve.c`, `walker.c`,
+      `trigger.c`, `fkey.c`, `analyze.c`, `pragma.c`, `alter.c`
 - [ ] SQL functions: `func.c`, `date.c`, `json.c`, `window.c`
 
 **Exit criteria:** full SQL pipeline in Zig; suite green.
@@ -183,8 +186,8 @@ Tokenizer → parser → code generator → optimizer. Depends on VDBE.
 - [x] `vdbevtab.c` — bytecode()/tables_used() vtab → `src/vdbevtab.zig`.
 - [x] `loadext.c` — runtime extension loading + the 279-slot `sqlite3_api_routines`
       table → `src/loadext.zig`.
-- [~] `prepare.c`, `vtab.c` — in progress (agent-ported, integrating).
-      `main.c` remains.
+- [x] `prepare.c` (sqlite3_prepare* + schema init) → `src/prepare.zig`.
+      `vtab.c` → `src/vtab.zig`. `main.c` remains.
 - [ ] `sqlite.h.in` → produce a Zig-friendly + C-ABI `sqlite3.h`
 - [ ] `shell.c.in` — CLI (can stay C longest; low value to port early)
 

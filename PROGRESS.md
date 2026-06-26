@@ -336,6 +336,16 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   config. TCL trigger1-3/view/schema/reindex/alter/attach2/capi3(250)/tableapi/
   bind/shared(211) green.
 
+- 2026-06-26: Wave 3 — SQL-command modules `auth.c` (authorization callbacks),
+  `vacuum.c` (VACUUM), `attach.c` (ATTACH/DETACH + the DbFixer AST walkers) — 36
+  modules. Agents briefed with the gotcha checklist; auth & vacuum landed with no
+  new bugs, attach needed only a dup-offset fixup (openFlags already added by
+  vacuum) at integration. attach is heavily coupled (SrcItem fg bitfield bytes +
+  u3/u4 unions, Select/With/Cte/TriggerStep/Trigger/Upsert/Walker/DbFixer at
+  ground-truth offsets; sqlite3_vfs.zName is at off 24 not 0). TCL --zig green:
+  auth(377) vacuum3(6062) attach(113)/attachmalloc(3037) + trigger1/2/4/view/
+  alter exercising the fixers.
+
 ### Resume guide — continuing the agent-parallelized migration
 The authoritative ordered list of ported modules (with one-line descriptions) is
 `ported_modules` in [build.zig](build.zig). To port the next module(s):
@@ -350,10 +360,10 @@ The authoritative ordered list of ported modules (with one-line descriptions) is
    the stem to `MODULES` in tools/tcltest.sh; `zig build` (comptime offset
    asserts validate the mirror); `zig build test`; `tools/tcltest.sh --zig
    <relevant tests>`; commit.
-Good next targets: analyze.c, pragma.c, vacuum.c, attach.c, auth.c, trigger.c,
-then the storage/VDBE core (pager/btree/vdbe — port in slices, not one shot).
-See `ported_modules` in build.zig for the 33 done (printf, util, callback,
-vdbevtab, fts3_aux, loadext, vtab, prepare, …).
+Good next targets: trigger.c, analyze.c, pragma.c, alter.c, then the
+storage/VDBE core (pager/btree/vdbe — port in slices, not one shot). See
+`ported_modules` in build.zig for the 36 done (… loadext, vtab, prepare, auth,
+vacuum, attach).
 Gotcha patterns that each cost real debug time — brief the agents on these:
   - **Struct field ORDER**: never assume a field is at offset 0 / "first". Probe
     EVERY field with offsetof (TriggerPrg.pNext is at 8, not 0 — that crashed the
