@@ -4,10 +4,10 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 0 done; Phase 1 in progress (22 modules ported)
+## Current status: Phase 0 done; Phase 1 in progress (24 modules ported)
 
 A Zig build system compiles upstream SQLite C (v3.54.0) into a static
-`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Twenty-two
+`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Twenty-four
 modules are now **ported to Zig**: `random.c`, `hash.c`, `bitvec.c`, `rowset.c`,
 `fault.c`, `mem1.c`, `complete.c`, `memjournal.c`, `fts3_hash.c`, `utf.c` (first
 **core-struct-coupled** module), `os.c` (VFS dispatch — every file I/O now Zig),
@@ -255,3 +255,28 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
 - 2026-06-26: Agent wave 3 (2 modules) — stmt.c (sqlite_stmt vtab), mutex.c
   (mutex dispatch; reads sqlite3Config.mutex@96/bCoreMutex@4). The mutex
   subsystem is now fully Zig. TCL mutex1/mutex2/stmtvtab1 green. 22 modules.
+- 2026-06-26: Agent wave 4 (2 modules) — vdbetrace.c (sqlite3VdbeExpandSql; reads
+  Vdbe + sqlite3 fields at offsets, mirrors StrAccum) and legacy.c (sqlite3_exec;
+  now driven by test/engine_test.zig). TCL trace/trace2/capi3(250)/exec/main
+  green. 24 modules.
+
+### Resume guide — continuing the agent-parallelized migration
+The authoritative ordered list of ported modules (with one-line descriptions) is
+`ported_modules` in [build.zig](build.zig). To port the next module(s):
+1. Spawn a general-purpose sub-agent per module with the playbook prompt used
+   this session (point it at docs/architecture.md, PROGRESS "Porting playbook",
+   and the closest example in src/*.zig; tell it to ONLY create src/<name>.zig,
+   use ground-truth offsets via @import("c_layout.zig") for build-divergent
+   internal struct fields, and report needed offsets — never edit shared files).
+2. Integrate (orchestrator, sequential): if the agent reported new struct field
+   offsets, add `P(<Struct>, <field>);` to tools/offsets.c and run
+   `tools/gen_layout.sh`; add `"<name>.c"` to `ported_modules` in build.zig and
+   the stem to `MODULES` in tools/tcltest.sh; `zig build` (comptime offset
+   asserts validate the mirror); `zig build test`; `tools/tcltest.sh --zig
+   <relevant tests>`; commit.
+Good next targets (harder — deeper struct coupling): callback.c, prepare.c,
+pcache.c/pcache1.c, fts3_aux.c, vdbevtab.c, then the big ones (printf.c, util.c)
+and the storage/VDBE core (pager/btree/vdbe — port in slices, not one shot).
+Deferred and why: ctime.c (compile-option list diverges by ~many flags → expand
+the `config` options module first); global.c (defines the sqlite3Config struct
+itself — every c_layout offset depends on it; high-stakes, do deliberately).
