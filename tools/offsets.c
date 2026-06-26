@@ -47,6 +47,41 @@ int main(void) {
     P(sqlite3, errByteOffset); /* printf.c — error-offset helpers */
     P(sqlite3, pParse);
     P(Parse, zTail);
+    /* callback.c — collation/function registry on the connection. */
+    P(sqlite3, pDfltColl);
+    P(sqlite3, mDbFlags);
+    P(sqlite3, xCollNeeded);
+    P(sqlite3, xCollNeeded16);
+    P(sqlite3, pCollNeededArg);
+    P(sqlite3, aFunc);
+    P(sqlite3, aCollSeq);
+    /* db->init.busy — nested sqlite3InitInfo; synthesized composite offset. */
+    printf("sqlite3_initBusy %zu\n",
+           offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, busy));
+    P(Parse, db); /* callback.c reads pParse->db/rc */
+    P(Parse, rc);
+    /* vdbevtab.c — bytecode() vtab walks Vdbe ops + schema hashes. */
+    P(sqlite3, aDb);
+    SZ(VdbeOp, VdbeOp);
+    P(VdbeOp, opcode);
+    P(VdbeOp, p1);
+    P(VdbeOp, p2);
+    P(VdbeOp, p3);
+    P(VdbeOp, p4);
+    P(VdbeOp, p5);
+    SZ(Db, Db);
+    P(Db, zDbSName);
+    P(Db, pSchema);
+    P(Schema, tblHash);
+    P(Schema, idxHash);
+    P(Hash, first);
+    P(HashElem, next);
+    P(HashElem, data);
+    P(Table, zName);
+    P(Table, tnum);
+    P(Table, eTabType);
+    P(Index, zName);
+    P(Index, tnum);
 
     /* Vdbe — vdbetrace.c reads db/nVar/aVar/pVList. */
     P(Vdbe, db);
