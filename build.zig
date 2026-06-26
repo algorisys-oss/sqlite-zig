@@ -99,6 +99,7 @@ const ported_modules = [_][]const u8{
     "btree.c", // -> src/btree.zig (B-tree: on-disk format, cursors, balancing)
     "vdbemem.c", // -> src/vdbemem.zig (Mem cell / sqlite3_value operations)
     "vdbeapi.c", // -> src/vdbeapi.zig (step/column/bind/result public API)
+    "vdbeaux.c", // -> src/vdbeaux.zig (bytecode assembly + record/serial codec)
 };
 
 pub fn build(b: *std.Build) void {
