@@ -97,6 +97,7 @@ const ported_modules = [_][]const u8{
     "pager.c", // -> src/pager.zig (pager: page txns, rollback journal, savepoints)
     "wal.c", // -> src/wal.zig (write-ahead log)
     "vdbemem.c", // -> src/vdbemem.zig (Mem cell / sqlite3_value operations)
+    "vdbeapi.c", // -> src/vdbeapi.zig (step/column/bind/result public API)
 };
 
 pub fn build(b: *std.Build) void {

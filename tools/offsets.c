@@ -339,6 +339,68 @@ int main(void) {
     P(TriggerStep, orconf);
     P(TriggerStep, pIdList);
     P(TriggerStep, zSpan);
+    /* vdbeapi.c — public step/column/bind/result API. Vdbe trailing fields
+    ** DIVERGE prod/tf (SQLITE_DEBUG inserts rcApp/nWrite/napArg); gen_layout
+    ** emits per-config values. Vdbe.rcApp (debug-only) + the .bits bitfield byte
+    ** are not offsetof-able here and stay config-gated in src/vdbeapi.zig. */
+    P(Vdbe, pVNext);
+    P(Vdbe, nMem);
+    P(Vdbe, iCurrentTime);
+    P(Vdbe, aOp);
+    P(Vdbe, nOp);
+    P(Vdbe, aColName);
+    P(Vdbe, pResultRow);
+    P(Vdbe, zErrMsg);
+    P(Vdbe, startTime);
+    P(Vdbe, nResColumn);
+    P(Vdbe, nResAlloc);
+    P(Vdbe, errorAction);
+    P(Vdbe, minWriteFileFormat);
+    P(Vdbe, prepFlags);
+    P(Vdbe, eVdbeState);
+    P(Vdbe, aCounter);
+    P(Vdbe, zSql);
+    P(Vdbe, expmask);
+    P(Vdbe, pFrame);
+    P(Vdbe, nFrame);
+    P(Vdbe, pAuxData);
+    P(sqlite3_context, pOut);
+    P(sqlite3_context, pFunc);
+    P(sqlite3_context, pMem);
+    P(sqlite3_context, pVdbe);
+    P(sqlite3_context, iOp);
+    P(sqlite3_context, isError);
+    P(sqlite3_context, enc);
+    SZ(AuxData, AuxData);
+    P(AuxData, iAuxOp);
+    P(AuxData, iAuxArg);
+    P(AuxData, pAux);
+    P(AuxData, xDeleteAux);
+    P(AuxData, pNextAux);
+    P(FuncDef, funcFlags);
+    P(FuncDef, pUserData);
+    P(FuncDef, zName);
+    P(KeyInfo, nKeyField);
+    P(UnpackedRecord, aMem);
+    P(UnpackedRecord, nField);
+    P(Column, iDflt);
+    P(sqlite3, init);
+    P(sqlite3, lookaside);
+    printf("sqlite3_lookaside_pStart %zu\n", offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, pStart));
+    printf("sqlite3_lookaside_pEnd %zu\n", offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, pEnd));
+    printf("sqlite3_lookaside_pTrueEnd %zu\n", offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, pTrueEnd));
+    P(sqlite3, nVdbeRead);
+    P(sqlite3, nVdbeWrite);
+    P(sqlite3, trace);
+    P(sqlite3, pTraceArg);
+    P(sqlite3, xProfile);
+    P(sqlite3, pProfileArg);
+    P(sqlite3, pPreUpdate);
+    P(sqlite3, xWalCallback);
+    P(sqlite3, pWalArg);
+    P(sqlite3, nDeferredCons);
+    P(sqlite3, nDeferredImmCons);
+    printf("Table_u_tab_pDfltList %zu\n", offsetof(struct Table, u.tab.pDfltList));
     /* sqlite3.init sub-struct (sqlite3InitInfo) — nested composite offsets. */
     printf("sqlite3_init_newTnum %zu\n", offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, newTnum));
     printf("sqlite3_init_iDb %zu\n",     offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, iDb));
