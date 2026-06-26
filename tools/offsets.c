@@ -230,6 +230,32 @@ int main(void) {
     P(BtShared, inTransaction);
     P(BtShared, btsFlags);
     P(BtShared, pageSize);
+    /* vdbeblob.c — incremental BLOB I/O reaches into Vdbe/VdbeCursor/Table/
+    ** Schema/Index/FKey. The 4 VdbeCursor fields below DIVERGE prod vs --dev. */
+    P(Vdbe, pc);
+    P(Vdbe, rc);
+    P(Vdbe, aMem);
+    P(Vdbe, apCsr);
+    P(VdbeCursor, eCurType);
+    P(VdbeCursor, nField);
+    P(VdbeCursor, nHdrParsed);
+    P(VdbeCursor, uc);
+    P(VdbeCursor, aType);
+    P(VdbeOp, p4type);
+    P(Parse, nVar);
+    P(Parse, nTab);
+    P(Table, u);
+    P(Table, tabFlags);
+    P(Table, pSchema);
+    P(Schema, schema_cookie);
+    P(Schema, iGeneration);
+    P(Index, aiColumn);
+    P(Index, nKeyCol);
+    P(FKey, pNextFrom);
+    P(FKey, nCol);
+    P(FKey, aCol);
+    SZ(FKeyCol, sColMap);
+    P(sqlite3, xPreUpdateCallback);
     /* sqlite3.init sub-struct (sqlite3InitInfo) — nested composite offsets. */
     printf("sqlite3_init_newTnum %zu\n", offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, newTnum));
     printf("sqlite3_init_iDb %zu\n",     offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, iDb));

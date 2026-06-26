@@ -91,6 +91,7 @@ const ported_modules = [_][]const u8{
     "attach.c", // -> src/attach.zig (ATTACH/DETACH + DbFixer AST walkers)
     "backup.c", // -> src/backup.zig (online backup API + BtreeCopyFile)
     "date.c", // -> src/date.zig (date/time SQL functions)
+    "vdbeblob.c", // -> src/vdbeblob.zig (incremental BLOB I/O)
 };
 
 pub fn build(b: *std.Build) void {
