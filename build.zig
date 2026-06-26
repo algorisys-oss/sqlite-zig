@@ -193,6 +193,24 @@ pub fn build(b: *std.Build) void {
         unit_step.dependOn(&b.addRunArtifact(ut).step);
     }
     test_step.dependOn(unit_step);
+
+    // `zig build test-zig` — Zig-native engine test suite: SQLite test cases
+    // ported to Zig `test` blocks that drive the public C API and assert results,
+    // linked against this libsqlite3.a (so they exercise the ported Zig modules
+    // end-to-end). Also folded into `test`.
+    const zig_test_mod = b.createModule(.{
+        .root_source_file = b.path("test/engine_test.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    zig_test_mod.linkLibrary(lib);
+    zig_test_mod.linkSystemLibrary("z", .{});
+    zig_test_mod.linkSystemLibrary("m", .{});
+    const zig_test = b.addTest(.{ .root_module = zig_test_mod });
+    const zig_test_step = b.step("test-zig", "Run the Zig-native engine test suite (links libsqlite3.a)");
+    zig_test_step.dependOn(&b.addRunArtifact(zig_test).step);
+    test_step.dependOn(zig_test_step);
 }
 
 /// The library translation-unit list. Sourced from vendor/tu.txt (one C
