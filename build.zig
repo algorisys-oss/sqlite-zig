@@ -103,6 +103,7 @@ const ported_modules = [_][]const u8{
     "walker.c", // -> src/walker.zig (Expr/Select AST walker)
     "update.c", // -> src/update.zig (UPDATE statement codegen)
     "delete.c", // -> src/delete.zig (DELETE statement codegen)
+    "resolve.c", // -> src/resolve.zig (name resolution)
 };
 
 pub fn build(b: *std.Build) void {
