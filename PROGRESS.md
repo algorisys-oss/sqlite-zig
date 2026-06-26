@@ -357,6 +357,29 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   TCL --zig green incl. pagerfault(31589), ioerr(10885), savepoint4(3469),
   backup_ioerr(81377), fkey2(1217), triggerA(214), date4(24860), incrblob_err(2700).
 
+- 2026-06-26: Wave 5 (storage core + VDBE plumbing). Committed: `pager.c`,
+  `wal.c`, `vdbemem.c`, `vdbeapi.c` — **46 modules**. The whole transaction layer
+  (rollback journal + WAL) and the Mem/value layer and the public step/column/
+  bind/result API are now Zig. Integration bugs fixed: vdbemem UTF-16 number
+  prefix (check high byte before copying low); vdbeapi `db->mTrace` is u8 not u32
+  (misaligned u32 load crashed step on the first query). TCL --zig green incl.
+  pagerfault(31589), walfault(6520), capi3(250), bind(119), func(15031),
+  fkey2(1217), select1/where/expr.
+  **Deferred (drafted, NOT wired in): `src/vdbeaux.zig` and `src/btree.zig`.**
+  Both are written by agents and left on disk untracked. vdbeaux had 7 bugs found
+  & fixed during integration (3 macro/config-gated externs — sqlite3VtabInSync is
+  a macro, sqlite3ConnectionUnlocked/sqlite3FileSuffix3 are no-ops, disable/
+  enable_simulated_io_errors are SQLITE_TEST-only; SQLITE_LIMIT_VDBE_OP index is 5
+  not 11; the colCache check must read the :1 bitfield bit 0x10 at byte 5/7, NOT
+  pCache!=0 since allocateCursor only zeroes up to offsetof(pAltCursor); nTempReg
+  is u8 not int; sqlite3OpcodeProperty is a char[] — bind the symbol address, not
+  a [*]const u8). It now runs basic queries/index seeks/order-by/integrity_check,
+  but still crashes in the FindCompare/RecordCompare path (pKeyInfo deref) — the
+  record codec is correctness-critical (silently-wrong comparators corrupt index
+  order), so it needs a dedicated validation pass against the full suite before
+  committing. btree.zig (66 exports) was never integrated/debugged. See
+  [[vdbeaux-btree-deferred-wip]].
+
 ### Resume guide — continuing the agent-parallelized migration
 The authoritative ordered list of ported modules (with one-line descriptions) is
 `ported_modules` in [build.zig](build.zig). To port the next module(s):
