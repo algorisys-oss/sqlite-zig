@@ -104,6 +104,7 @@ const ported_modules = [_][]const u8{
     "update.c", // -> src/update.zig (UPDATE statement codegen)
     "delete.c", // -> src/delete.zig (DELETE statement codegen)
     "resolve.c", // -> src/resolve.zig (name resolution)
+    "vdbe.c", // -> src/vdbe.zig (bytecode interpreter: sqlite3VdbeExec dispatch loop)
 };
 
 pub fn build(b: *std.Build) void {

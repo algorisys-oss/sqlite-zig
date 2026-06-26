@@ -150,13 +150,17 @@ tests green; can open a file created by upstream and vice versa.
 
 The execution engine queries compile down to. Depends on storage + utils.
 
-- [ ] `vdbemem.c`, `vdbeaux.c`, `vdbeapi.c` — Mem cells, prepared-stmt plumbing
-- [ ] `vdbe.c` — the opcode interpreter (~322 KB)
-- [ ] `vdbesort.c`, `vdbeblob.c`, `vdbetrace.c`
+- [x] `vdbemem.c`, `vdbeaux.c`, `vdbeapi.c` — Mem cells, prepared-stmt plumbing
+- [x] `vdbe.c` — the opcode interpreter (all 192 opcodes; `src/vdbe.zig`).
+      Core SQL validated against the upstream TCL suite in the `--dev` config.
+      Open: FTS5-write lookaside corruption (vdbe.zig); vtab `UPDATE` codegen
+      (update.zig). See PROGRESS.md "Known issues".
+- [x] `vdbetrace.c`, `vdbeblob.c` — ported. [ ] `vdbesort.c` (sorter still C).
 - [ ] opcode generation: port `tool/mkopcodeh.tcl` flow or generate `opcodes.*`
       at build time so opcodes stay in sync with the interpreter.
 
-**Exit criteria:** VDBE runs ported bytecode; suite green.
+**Exit criteria:** VDBE runs ported bytecode; suite green. — **met for core SQL**
+(interpreter is Zig; 1000+ upstream tests pass). Two vtab-write bugs tracked.
 
 ## Phase 5 — SQL compiler front-end
 

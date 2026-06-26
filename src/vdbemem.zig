@@ -1013,7 +1013,10 @@ export fn sqlite3VdbeMemSetStr(
             return nomemBkpt();
         }
         const dst = pMem.z.?;
-        @memcpy(dst[0..@intCast(nAlloc)], zp[0..@intCast(nAlloc)]);
+        // memmove (not @memcpy): source/dest may alias when a value is re-bound
+        // into its own statement (e.g. FTS5 content rows). Mirrors C memcpy,
+        // which tolerates the overlap these call sites actually produce.
+        @memmove(dst[0..@intCast(nAlloc)], zp[0..@intCast(nAlloc)]);
     } else {
         sqlite3VdbeMemRelease(pMem);
         pMem.z = @constCast(zp);
@@ -1075,7 +1078,8 @@ export fn sqlite3VdbeMemSetText(
             return nomemBkpt();
         }
         const dst = pMem.z.?;
-        @memcpy(dst[0..@intCast(nByte)], zp[0..@intCast(nByte)]);
+        // memmove (not @memcpy): source/dest may alias (transient re-bind).
+        @memmove(dst[0..@intCast(nByte)], zp[0..@intCast(nByte)]);
         dst[@intCast(nByte)] = 0;
     } else {
         sqlite3VdbeMemRelease(pMem);
