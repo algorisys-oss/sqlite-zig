@@ -373,6 +373,7 @@ int main(void) {
     P(Sqlite3Config, nPage);
     P(Sqlite3Config, xLog); /* printf.c — sqlite3_log */
     P(Sqlite3Config, pLogArg);
+    P(Sqlite3Config, nStmtSpill); /* pager.c — statement-journal spill threshold */
 
     /* PgHdr — pcache.c; ABI-shared (defined in pcache.h, the pager reads it). */
     SZ(PgHdr, PgHdr);
