@@ -157,6 +157,8 @@ full `testrunner.tcl full` green.
 
 ## Phase 7 — Extensions & platform breadth (optional / later)
 
+- [x] `fts3_hash.c` — FTS3 standalone hash table → `src/fts3_hash.zig` (ported
+      early as a clean config-invariant leaf; TCL fts3*/fts4aa green).
 - [ ] FTS5, RTREE, JSON1 (if not folded in), session, rbu — under `ext/`
 - [ ] Windows VFS (`os_win.c`), other platforms
 - [ ] A native Zig API surface (idiomatic, not just the C ABI)

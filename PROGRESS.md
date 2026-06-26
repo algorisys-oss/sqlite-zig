@@ -4,13 +4,13 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 0 done; Phase 1 in progress (8 modules ported)
+## Current status: Phase 0 done; Phase 1 in progress (9 modules ported)
 
 A Zig build system compiles upstream SQLite C (v3.54.0) into a static
-`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Eight modules
+`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Nine modules
 are now **ported to Zig** and linked in place of their C versions: `random.c`,
 `hash.c`, `bitvec.c`, `rowset.c`, `fault.c`, `mem1.c`, `complete.c`,
-`memjournal.c` (the first Phase-2 / storage-adjacent module).
+`memjournal.c` (first storage-layer module), `fts3_hash.c`.
 Each passes the functional gate (`zig build test`) and SQLite's own TCL
 `testfixture` suite with the Zig objects swapped in. Notably the Zig `mem1`
 allocator now backs **every** allocation in the engine, validated across a broad
@@ -52,6 +52,10 @@ json101, savepoint, attach, collate1, analyze, where, func, …).
   disk). Own opaque structs + public `sqlite3_file`/`sqlite3_io_methods` ABI +
   `sqlite3Os*` wrappers. `sqlite3JournalCreate` is ATOMIC_WRITE-gated (off) so
   not exported. TCL: jrnlmode/savepoint/trigger2/fkey2/tempdb.
+- `fts3_hash.c` → `src/fts3_hash.zig` — FTS3's standalone hash table (STRING /
+  BINARY key classes, optional key-copy). ABI-shared structs like `hash.c`;
+  config-invariant (sqlite3_malloc64/free + libc compare). TCL:
+  fts3aa/fts3ab/fts3expr/fts3near/fts3query/fts4aa.
 
 ### Validating ports against the TCL suite
 `tools/tcltest.sh --zig [tests...]` relinks upstream `testfixture` with every
@@ -192,3 +196,7 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   first storage-layer module. Config-invariant (opaque structs + public
   sqlite3_file ABI). TCL green incl. the statement-journal spill path
   (jrnlmode/savepoint/trigger2/fkey2/tempdb).
+- 2026-06-26: Ported `fts3_hash.c` (FTS3 hash table) — 9 modules. ABI-shared
+  structs like hash.c. TCL fts3aa/ab/expr/near/query/fts4aa green (incl.
+  fts3query's 1258 assertions). Broad cross-subsystem --zig sweep also green
+  (insert/select4/update/view/subquery/window1/cast/vacuum/incrblob/boundary1…).
