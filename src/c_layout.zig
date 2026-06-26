@@ -29,6 +29,8 @@ const prod = struct {
     pub const Sqlite3Config_pHeap: usize = 272;
     pub const Sqlite3Config_mnReq: usize = 284;
     pub const Sqlite3Config_bMemstat: usize = 0;
+    pub const Sqlite3Config_mutex: usize = 96;
+    pub const Sqlite3Config_bCoreMutex: usize = 4;
 };
 
 /// --dev testfixture config (SQLITE_DEBUG + SQLITE_TEST).
@@ -53,6 +55,8 @@ const tf = struct {
     pub const Sqlite3Config_pHeap: usize = 272;
     pub const Sqlite3Config_mnReq: usize = 284;
     pub const Sqlite3Config_bMemstat: usize = 0;
+    pub const Sqlite3Config_mutex: usize = 96;
+    pub const Sqlite3Config_bCoreMutex: usize = 4;
 };
 
 /// The layout namespace matching the current build.

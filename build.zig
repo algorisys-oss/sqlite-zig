@@ -72,6 +72,8 @@ const ported_modules = [_][]const u8{
     "threads.c", // -> src/threads.zig (pthreads worker-thread helper)
     "mutex_noop.c", // -> src/mutex_noop.zig (no-op / debug-checking mutex)
     "mem5.c", // -> src/mem5.zig (MEMSYS5 buddy allocator)
+    "stmt.c", // -> src/stmt.zig (sqlite_stmt eponymous virtual table)
+    "mutex.c", // -> src/mutex.zig (mutex dispatch layer)
 };
 
 pub fn build(b: *std.Build) void {

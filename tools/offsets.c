@@ -44,5 +44,7 @@ int main(void) {
     P(Sqlite3Config, pHeap);
     P(Sqlite3Config, mnReq);
     P(Sqlite3Config, bMemstat);
+    P(Sqlite3Config, mutex); /* mutex.c dispatches through this embedded methods sub-struct */
+    P(Sqlite3Config, bCoreMutex);
     return 0;
 }
