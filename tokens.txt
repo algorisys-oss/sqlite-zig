@@ -37,4 +37,16 @@
     note:   figures are through the last recorded step; re-run the script next
             session to capture this turn's tail.
 
-# Session actual total so far: 26,485,505 tokens.
+[2026-06-26] 09:56:32-(in progress)  in=20522  cr=801805  rd=50918325  out=603541  ->  TOTAL=52344193  (cum=78829698)
+    prompt: Free for 8 hours; do the SQLite C->Zig migration (full autonomy).
+    folded: freedom to pick features, commit+test each; document decisions in
+            docs/; log token usage.
+    note:   Phase 1 batch — ported hash, bitvec, rowset, fault, mem1, complete,
+            memjournal to Zig (8 modules total; +random from before). The Zig
+            mem1 allocator now backs every allocation; memjournal is the first
+            storage-layer module. Added docs/architecture.md (config-divergence
+            decision). All ports validated green against the TCL testfixture.
+            Figures are through the last recorded step of this in-progress turn;
+            re-run the script next session to capture its tail.
+
+# Session actual total so far (cumulative): 78,829,698 tokens.
