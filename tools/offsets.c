@@ -119,6 +119,46 @@ int main(void) {
     P(Parse, apVtabLock);
     SZ(Parse, Parse);
     SZ(Table, Table);
+    /* prepare.c — statement preparation + schema init. (Parse.checkSchema is a
+    ** :1 bitfield → not offsetof-able; src/prepare.zig gates its byte on config.) */
+    P(sqlite3, pVdbe);
+    P(sqlite3, nDb);
+    P(sqlite3, noSharedCache);
+    P(sqlite3, busyHandler);
+    P(sqlite3, xAuth);
+    P(Parse, pVdbe);
+    P(Parse, nQueryLoop);
+    P(Parse, nested);
+    P(Parse, disableLookaside);
+    P(Parse, prepFlags);
+    P(Parse, nTableLock);
+    P(Parse, aTableLock);
+    P(Parse, pTriggerPrg);
+    P(Parse, pCleanup);
+    P(Parse, aLabel);
+    P(Parse, pConstExpr);
+    P(Parse, pOuterParse);
+    P(Parse, explain);
+    P(Parse, pReprepare);
+    P(Db, pBt);
+    P(Index, pNext);
+    P(Index, pTable);
+    P(Table, pIndex);
+    P(Schema, schemaFlags);
+    P(TriggerPrg, pNext); /* prepare.c walks the TriggerPrg cleanup list */
+    /* sqlite3.init sub-struct (sqlite3InitInfo) — nested composite offsets. */
+    printf("sqlite3_init_newTnum %zu\n", offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, newTnum));
+    printf("sqlite3_init_iDb %zu\n",     offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, iDb));
+    printf("sqlite3_init_azInit %zu\n",  offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, azInit));
+    /* orphanTrigger is the :1 bitfield in the byte right after `busy`. */
+    printf("sqlite3_init_bitbyte %zu\n", offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, busy) + 1);
+    /* sqlite3.lookaside sub-struct (Lookaside) — nested composite offsets. */
+    printf("sqlite3_lookaside_bDisable %zu\n", offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, bDisable));
+    printf("sqlite3_lookaside_sz %zu\n",       offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, sz));
+    printf("sqlite3_lookaside_szTrue %zu\n",   offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, szTrue));
+    /* Parse recursive-region sizes (macros in sqliteInt.h, offsetof-derived). */
+    printf("PARSE_HDR_SZ %d\n", (int)PARSE_HDR_SZ);
+    printf("PARSE_RECURSE_SZ %d\n", (int)PARSE_RECURSE_SZ);
 
     /* Vdbe — vdbetrace.c reads db/nVar/aVar/pVList. */
     P(Vdbe, db);
