@@ -287,6 +287,30 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   etDYNSTRING so a NULL arg skips adoption. TCL --zig green: printf(1439)/
   printf2(51)/format4/func(15031)/func2/e_expr(16619)/select1/where2/misc1/misc3/
   randexpr1/in; engine_test 18/18; functional + amalgamation builds green.
+- 2026-06-26: Ported `fts3_aux.c` (fts4aux vtab) — 27 modules. Single export
+  sqlite3Fts3InitAux; no new offsets (Fts3Table fields are leading; the
+  DEBUG/TEST-only trailing fields gated via @import("config") to match struct
+  size). TCL fts3aux1(95)/fts3aux2(24) green.
+- 2026-06-26: Ported `callback.c` (collation/function registry) + `vdbevtab.c`
+  (bytecode()/tables_used() vtab) — 29 modules. callback bugs: (1) sqlite3StrBINARY
+  is a C `char[]` (symbol address IS the string) but was declared as a pointer →
+  Zig deref'd the bytes "BINARY\0" as a pointer in strHash at open time; bind it
+  as a symbol byte and take its address. (2) FuncDef.nArg (i16) ← C's `(u16)nArg`
+  is a bit-truncate (nArg may be -1); @intCast panicked → use @truncate. New
+  offsets for sqlite3/Parse/CollSeq/FuncDef/Schema/Hash/Db/VdbeOp/Table/Index/
+  Column. TCL collate1-4/func/distinct2/having/upsert1/stmtvtab1/enc green.
+- 2026-06-26: Ported `util.c` (varint, atoi/atof, error/progress helpers) — 30
+  modules; the foundational utility grab-bag (50 exports). Agent's 45M-case
+  differential fuzzing caught sqlite3LogEstToInt (@mod→@rem) and AddInt64/SubInt64/
+  MulInt64 (zig cc compiles the GCC<5 fallback that leaves *pA unchanged on
+  overflow). The TCL suite caught a third: sqlite3Atoi64 + DecOrHexToI64 hex
+  accumulate magnitude in u64 with defined unsigned wrap (re-checked after), but
+  the Zig `+` was checked and panicked on 19+ digit literals → `+%`. TCL
+  e_expr(16619)/boundary2(3022)/boundary1(1512)/func(15031)/where(318)/expr(661)/
+  cast/hexlit/like/misc1,3,5/quote/between/in/intpkey/select1,4 green.
+- 2026-06-26: build.zig now also installs the CLI shell as `sqlite-zig` (same
+  bytes as `sqlite3`, linked against the ported-Zig lib) so the project ships a
+  CLI under its own name.
 
 ### Resume guide — continuing the agent-parallelized migration
 The authoritative ordered list of ported modules (with one-line descriptions) is
@@ -302,9 +326,15 @@ The authoritative ordered list of ported modules (with one-line descriptions) is
    the stem to `MODULES` in tools/tcltest.sh; `zig build` (comptime offset
    asserts validate the mirror); `zig build test`; `tools/tcltest.sh --zig
    <relevant tests>`; commit.
-Good next targets (harder — deeper struct coupling): callback.c, prepare.c,
-pcache.c/pcache1.c, fts3_aux.c, vdbevtab.c, then the big ones (printf.c, util.c)
-and the storage/VDBE core (pager/btree/vdbe — port in slices, not one shot).
+Good next targets (harder — deeper struct coupling): prepare.c, vtab.c,
+analyze.c, pragma.c, loadext.c, then the storage/VDBE core (pager/btree/vdbe —
+port in slices, not one shot). Done so far incl. printf.c, util.c, callback.c,
+vdbevtab.c, fts3_aux.c (see ported_modules in build.zig for the full list).
+Gotcha pattern to watch (cost real debug time this session): C unsigned/u64
+accumulation (`x = x*10 + d`) wraps by definition — port with `*%`/`+%`, not
+checked ops, wherever the magnitude is re-validated afterward rather than
+bounded before. And a C `char[]` symbol's *address* is the data: bind it as
+`extern const <name>: u8` and take `&`, never as a `[*:0]const u8` value.
 Deferred and why: ctime.c (compile-option list diverges by ~many flags → expand
 the `config` options module first); global.c (defines the sqlite3Config struct
 itself — every c_layout offset depends on it; high-stakes, do deliberately).
