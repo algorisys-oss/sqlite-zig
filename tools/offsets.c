@@ -61,6 +61,8 @@ int main(void) {
     P(Sqlite3Config, mutex); /* mutex.c dispatches through this embedded methods sub-struct */
     P(Sqlite3Config, bCoreMutex);
     P(Sqlite3Config, pcache2); /* pcache.c dispatches through this embedded methods sub-struct */
+    P(Sqlite3Config, pPage); /* pcache1.c — SQLITE_CONFIG_PAGECACHE buffer */
+    P(Sqlite3Config, nPage);
 
     /* PgHdr — pcache.c; ABI-shared (defined in pcache.h, the pager reads it). */
     SZ(PgHdr, PgHdr);
