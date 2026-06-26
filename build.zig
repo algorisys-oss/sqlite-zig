@@ -87,6 +87,7 @@ const ported_modules = [_][]const u8{
     "vtab.c", // -> src/vtab.zig (virtual-table object management)
     "prepare.c", // -> src/prepare.zig (sqlite3_prepare* + schema init)
     "auth.c", // -> src/auth.zig (authorization callback layer)
+    "vacuum.c", // -> src/vacuum.zig (VACUUM command)
 };
 
 pub fn build(b: *std.Build) void {

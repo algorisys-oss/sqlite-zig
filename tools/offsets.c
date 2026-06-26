@@ -163,6 +163,18 @@ int main(void) {
     P(SrcItem, iCursor);
     P(SrcItem, pSTab);
     SZ(SrcItem, SrcItem);
+    /* vacuum.c — VACUUM (attach temp db, mirror+copy, swap meta). */
+    P(sqlite3, autoCommit);
+    P(sqlite3, nVdbeActive);
+    P(sqlite3, openFlags);
+    P(sqlite3, nChange);
+    P(sqlite3, nTotalChange);
+    P(sqlite3, mTrace);
+    P(sqlite3, nextPagesize);
+    P(sqlite3, nextAutovac);
+    P(Db, safety_level);
+    P(Parse, nMem);
+    P(Schema, cache_size);
     /* sqlite3.init sub-struct (sqlite3InitInfo) — nested composite offsets. */
     printf("sqlite3_init_newTnum %zu\n", offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, newTnum));
     printf("sqlite3_init_iDb %zu\n",     offsetof(struct sqlite3, init) + offsetof(struct sqlite3InitInfo, iDb));
