@@ -103,6 +103,22 @@ int main(void) {
     /* loadext.c — extension registry on the connection. */
     P(sqlite3, nExtension);
     P(sqlite3, aExtension);
+    /* vtab.c — virtual-table object management. (Parse.disableTriggers is a
+    ** :1 bitfield → not offsetof-able; src/vtab.zig gates its byte on config.) */
+    P(sqlite3, aModule);
+    P(sqlite3, pVtabCtx);
+    P(sqlite3, aVTrans);
+    P(sqlite3, nVTrans);
+    P(sqlite3, pDisconnect);
+    P(sqlite3, nSchemaLock);
+    P(sqlite3, vtabOnConflict);
+    P(sqlite3, nStatement);
+    P(sqlite3, nSavepoint);
+    P(sqlite3, pnBytesFreed);
+    P(Parse, pNewTable);
+    P(Parse, apVtabLock);
+    SZ(Parse, Parse);
+    SZ(Table, Table);
 
     /* Vdbe — vdbetrace.c reads db/nVar/aVar/pVList. */
     P(Vdbe, db);

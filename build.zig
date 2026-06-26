@@ -84,6 +84,7 @@ const ported_modules = [_][]const u8{
     "vdbevtab.c", // -> src/vdbevtab.zig (bytecode() virtual table)
     "util.c", // -> src/util.zig (varint, atoi/atof, error/progress helpers)
     "loadext.c", // -> src/loadext.zig (runtime extension loading + api table)
+    "vtab.c", // -> src/vtab.zig (virtual-table object management)
 };
 
 pub fn build(b: *std.Build) void {
