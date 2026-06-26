@@ -132,8 +132,12 @@ heavy reliance on the corruption/recovery tests.
       opaque. Surfaced the `extern var` vs `extern const` optimizer-CSE gotcha
       (a mutable C global read from Zig must be `extern var`). pcache/pcache2/
       pager1 green. First Phase-3 storage modules.
-- [ ] `pager.c`, `pager.h` — page-level transactions/journaling (~302 KB)
-- [ ] `wal.c` — write-ahead log (~178 KB)
+- [x] `pager.c` — page-level transactions / rollback journal / savepoints /
+      hot-journal recovery / WAL handoff → `src/pager.zig` (75 exports; the
+      private Pager struct owned here, PgHdr mirrored with comptime asserts).
+      Every byte of file I/O now flows through Zig pager→pcache→os/VFS. TCL
+      pagerfault(31589)/ioerr(10885)/savepoint4(3469)/wal/wal2/jrnlmode green.
+- [ ] `wal.c` — write-ahead log (~178 KB) — still C (pager calls it via ABI)
 - [ ] `btree.c`, `btree.h`, `btreeInt.h`, `btmutex.c` — B-tree (~406 KB, largest)
 - [ ] `backup.c`
 
@@ -165,10 +169,13 @@ Tokenizer → parser → code generator → optimizer. Depends on VDBE.
       `src/auth.zig`. `vacuum.c` → `src/vacuum.zig`. `attach.c` (+ the DbFixer
       schema-fixer AST walkers) → `src/attach.zig`. (Done ahead of the rest of
       Phase 5; they sit on the already-ported prepare/callback/util layer.)
+- [x] `trigger.c` (triggers + RETURNING + INSTEAD OF) → `src/trigger.zig`.
+      `fkey.c` (foreign-key codegen) → `src/fkey.zig`.
 - [ ] Remaining code generators: `expr.c`, `build.c`, `select.c`, `insert.c`,
       `update.c`, `delete.c`, `where*.c` (optimizer), `resolve.c`, `walker.c`,
-      `trigger.c`, `fkey.c`, `analyze.c`, `pragma.c`, `alter.c`
-- [ ] SQL functions: `func.c`, `date.c`, `json.c`, `window.c`
+      `analyze.c`, `pragma.c`, `alter.c`
+- [x] `date.c` (date/time fns) → `src/date.zig`. SQL functions remaining:
+      `func.c`, `json.c`, `window.c`.
 
 **Exit criteria:** full SQL pipeline in Zig; suite green.
 

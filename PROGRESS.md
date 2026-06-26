@@ -346,6 +346,17 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   auth(377) vacuum3(6062) attach(113)/attachmalloc(3037) + trigger1/2/4/view/
   alter exercising the fixers.
 
+- 2026-06-26: Wave 4 — `backup.c` (online backup; first to read Btree/BtShared,
+  added btreeInt.h to offsets.c), `date.c` (date/time fns, bit-exact; fixed a
+  0-arg null-argv @ptrCast panic), `vdbeblob.c` (incremental BLOB; 4 config-
+  DIVERGENT VdbeCursor offsets), `fkey.c` (foreign keys), `trigger.c` (triggers
+  +RETURNING; agent self-fixed a FinishTrigger double-free), and **`pager.c`**
+  (the ~7800-LOC pager monolith — 75 exports, page txns/rollback journal/
+  savepoints/WAL-handoff/hot-journal recovery; only 1 new offset). 43 modules.
+  Every byte of file I/O now flows through ported-Zig pager→pcache→os/VFS.
+  TCL --zig green incl. pagerfault(31589), ioerr(10885), savepoint4(3469),
+  backup_ioerr(81377), fkey2(1217), triggerA(214), date4(24860), incrblob_err(2700).
+
 ### Resume guide — continuing the agent-parallelized migration
 The authoritative ordered list of ported modules (with one-line descriptions) is
 `ported_modules` in [build.zig](build.zig). To port the next module(s):
@@ -360,10 +371,12 @@ The authoritative ordered list of ported modules (with one-line descriptions) is
    the stem to `MODULES` in tools/tcltest.sh; `zig build` (comptime offset
    asserts validate the mirror); `zig build test`; `tools/tcltest.sh --zig
    <relevant tests>`; commit.
-Good next targets: trigger.c, analyze.c, pragma.c, alter.c, then the
-storage/VDBE core (pager/btree/vdbe — port in slices, not one shot). See
-`ported_modules` in build.zig for the 36 done (… loadext, vtab, prepare, auth,
-vacuum, attach).
+Good next targets: the storage core `btree.c`/`wal.c` and the VDBE plumbing
+`vdbeaux.c`/`vdbemem.c`/`vdbeapi.c`/`vdbesort.c`, then the `vdbe.c` interpreter
+and the SQL codegen (expr/select/where/build/insert/update/delete/resolve/
+walker), analyze.c, pragma.c, alter.c. See `ported_modules` in build.zig for the
+43 done (… prepare, auth, vacuum, attach, backup, date, vdbeblob, fkey, trigger,
+pager). pager is Zig; btree (still C) calls into it via the stable Pager ABI.
 Gotcha patterns that each cost real debug time — brief the agents on these:
   - **Struct field ORDER**: never assume a field is at offset 0 / "first". Probe
     EVERY field with offsetof (TriggerPrg.pNext is at 8, not 0 — that crashed the
