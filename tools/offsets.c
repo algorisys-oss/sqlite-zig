@@ -356,6 +356,19 @@ int main(void) {
     P(Window, pEnd);
     P(Window, pNextWin);
     P(Window, pFilter);
+    /* delete.c — DELETE codegen + vtab/auth helpers. (Index.idxType :bitfield
+    ** gated in src/delete.zig.) */
+    P(Index, nColumn);
+    P(Index, pSchema);
+    P(Parse, iSelfTab);
+    P(Module, pModule);
+    P(VTable, pMod);
+    P(VTable, eVtabRisk);
+    P(sqlite3_module, xUpdate);
+    SZ(AuthContext, AuthContext);
+    SZ(SelectDest, SelectDest);
+    printf("SrcItem_u4_zDatabase %zu\n", offsetof(struct SrcItem, u4.zDatabase));
+    printf("Table_u_vtab_p %zu\n", offsetof(struct Table, u.vtab.p));
     /* vdbeapi.c — public step/column/bind/result API. Vdbe trailing fields
     ** DIVERGE prod/tf (SQLITE_DEBUG inserts rcApp/nWrite/napArg); gen_layout
     ** emits per-config values. Vdbe.rcApp (debug-only) + the .bits bitfield byte
