@@ -505,5 +505,41 @@ int main(void) {
     P(Parse, pAinc);
     P(Schema, pSeqTab);
     P(Select, op);
+
+    /* window.c — OVER-clause machinery + frame codegen. Window struct is in
+    ** sqliteInt.h (config-invariant, sizeof 144); src/window.zig mirrors it. */
+    P(Select, pWin);
+    P(Select, selId);
+    P(Parse, addrExplain);
+    P(Expr, op2);
+    P(Expr, pAggInfo);
+    SZ(Expr, Expr);
+    P(sqlite3, dbOptFlags);
+    P(KeyInfo, aSortFlags);
+    printf("SrcItem_u4_pSubq %zu\n", offsetof(struct SrcItem, u4.pSubq));
+    printf("ExprList_item_fg_sortFlags %zu\n",
+           offsetof(struct ExprList_item, fg.sortFlags));
+    SZ(Window, Window);
+    P(Window, eFrmType);
+    P(Window, eStart);
+    P(Window, eEnd);
+    P(Window, bImplicitFrame);
+    P(Window, eExclude);
+    P(Window, ppThis);
+    P(Window, pWFunc);
+    P(Window, iEphCsr);
+    P(Window, regAccum);
+    P(Window, regResult);
+    P(Window, csrApp);
+    P(Window, regApp);
+    P(Window, regPart);
+    P(Window, pOwner);
+    P(Window, nBufferCol);
+    P(Window, iArgCol);
+    P(Window, regOne);
+    P(Window, regStartRowid);
+    P(Window, regEndRowid);
+    P(Window, bExprArgs);
+    P(FuncDef, xSFunc);
     return 0;
 }
