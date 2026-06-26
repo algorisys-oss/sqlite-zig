@@ -4,10 +4,10 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 0 done; Phase 1 in progress (16 modules ported)
+## Current status: Phase 0 done; Phase 1 in progress (22 modules ported)
 
 A Zig build system compiles upstream SQLite C (v3.54.0) into a static
-`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Sixteen
+`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Twenty-two
 modules are now **ported to Zig**: `random.c`, `hash.c`, `bitvec.c`, `rowset.c`,
 `fault.c`, `mem1.c`, `complete.c`, `memjournal.c`, `fts3_hash.c`, `utf.c` (first
 **core-struct-coupled** module), `os.c` (VFS dispatch — every file I/O now Zig),
@@ -249,3 +249,9 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   carray.c (config-invariant) and table.c (reads db->errCode at a ground-truth
   offset) — 16 modules. TCL fts3aa/fts3ad/fts4unicode/carray01/tabfunc01(246)/
   table(97)/tableapi(171)/capi2 green.
+- 2026-06-26: Agent wave 2 (4 modules) — mem5 (MEMSYS5; sqlite3Config offsets),
+  mutex_noop (debug checking mutex), threads (pthreads sorter helper),
+  fts3_unicode2 (fold data). TCL mutex1/mutex2/mem5/fts4unicode/sort green.
+- 2026-06-26: Agent wave 3 (2 modules) — stmt.c (sqlite_stmt vtab), mutex.c
+  (mutex dispatch; reads sqlite3Config.mutex@96/bCoreMutex@4). The mutex
+  subsystem is now fully Zig. TCL mutex1/mutex2/stmtvtab1 green. 22 modules.
