@@ -225,6 +225,23 @@ pub fn build(b: *std.Build) void {
     const zig_test_step = b.step("test-zig", "Run the Zig-native engine test suite (links libsqlite3.a)");
     zig_test_step.dependOn(&b.addRunArtifact(zig_test).step);
     test_step.dependOn(zig_test_step);
+
+    // `zig build sample` — a Zig program that builds + verifies the sample blog
+    // database (sampledata/blog.db) through the public C API, linked against this
+    // libsqlite3.a (so it drives the ported Zig modules end-to-end).
+    const sample_mod = b.createModule(.{
+        .root_source_file = b.path("sampledata/blog_build.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    sample_mod.linkLibrary(lib);
+    sample_mod.linkSystemLibrary("z", .{});
+    sample_mod.linkSystemLibrary("m", .{});
+    const sample_exe = b.addExecutable(.{ .name = "blog_build", .root_module = sample_mod });
+    const sample_run = b.addRunArtifact(sample_exe);
+    sample_run.setCwd(b.path(".")); // write sampledata/blog.db at the project root
+    b.step("sample", "Build + verify the sample blog DB via a Zig program").dependOn(&sample_run.step);
 }
 
 /// The library translation-unit list. Sourced from vendor/tu.txt (one C
