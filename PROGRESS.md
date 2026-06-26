@@ -373,7 +373,13 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   under config.sqlite_test (test_btree.c reads it). TCL --zig green incl.
   **corrupt(12288)**, autovacuum(339), index(121), shared2, fkey2(1217). The
   whole storage engine (pager+wal+btree) is now Zig.
-  **Still deferred: `src/vdbeaux.zig`** (drafted, on disk, NOT wired in). vdbeaux had 7 bugs found
+- 2026-06-26: Ported `vdbeaux.c` (bytecode assembly + record/serial codec) —
+  48 modules. The whole VDBE plumbing (vdbemem+vdbeapi+vdbeaux) is now Zig; only
+  the vdbe.c interpreter stays C. 9 integration bugs fixed, incl. KeyInfo.aColl
+  being an inline array (3 double-deref crashes), Parse.nVar as i16 (EXPLAIN's
+  explain byte made nVar=0x02000000 → 2.4GB alloc), and sqlite3_module.xClose at
+  56 not 64 (=xFilter, segfaulting vtab teardown). TCL --zig green: join(192)
+  where(318) eqp(65) collate(384) vtab1(223) tabfunc01(246) rowvalue(307) etc. vdbeaux had 7 bugs found
   & fixed during integration (3 macro/config-gated externs — sqlite3VtabInSync is
   a macro, sqlite3ConnectionUnlocked/sqlite3FileSuffix3 are no-ops, disable/
   enable_simulated_io_errors are SQLITE_TEST-only; SQLITE_LIMIT_VDBE_OP index is 5
