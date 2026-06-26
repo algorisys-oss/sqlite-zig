@@ -138,7 +138,9 @@ heavy reliance on the corruption/recovery tests.
       Every byte of file I/O now flows through Zig pager→pcache→os/VFS. TCL
       pagerfault(31589)/ioerr(10885)/savepoint4(3469)/wal/wal2/jrnlmode green.
 - [ ] `wal.c` — write-ahead log (~178 KB) — still C (pager calls it via ABI)
-- [ ] `btree.c`, `btree.h`, `btreeInt.h`, `btmutex.c` — B-tree (~406 KB, largest)
+- [x] `btree.c` (on-disk format, cursors, balancing, autovacuum, shared-cache,
+      overflow, integrity_check) -> src/btree.zig. Agent byte-exact-validated vs
+      C + cross-version compat; TCL corrupt(12288)/autovacuum/index green.
 - [ ] `backup.c`
 
 **Exit criteria:** on-disk format byte-compatible; pager/btree/wal/corrupt

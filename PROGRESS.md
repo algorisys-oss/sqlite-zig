@@ -365,8 +365,15 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   (misaligned u32 load crashed step on the first query). TCL --zig green incl.
   pagerfault(31589), walfault(6520), capi3(250), bind(119), func(15031),
   fkey2(1217), select1/where/expr.
-  **Deferred (drafted, NOT wired in): `src/vdbeaux.zig` and `src/btree.zig`.**
-  Both are written by agents and left on disk untracked. vdbeaux had 7 bugs found
+- 2026-06-26: Ported **`btree.c`** — 47 modules. The largest, most format-
+  critical file (~11600 LOC, 83 exports): on-disk page format, cursors, balancing,
+  overflow chains, autovacuum/ptrmap, shared-cache. The agent self-validated via
+  byte-exact differential testing vs C + bidirectional cross-version compat and
+  fixed 5 bugs itself; integration only needed exporting sqlite3SharedCacheList
+  under config.sqlite_test (test_btree.c reads it). TCL --zig green incl.
+  **corrupt(12288)**, autovacuum(339), index(121), shared2, fkey2(1217). The
+  whole storage engine (pager+wal+btree) is now Zig.
+  **Still deferred: `src/vdbeaux.zig`** (drafted, on disk, NOT wired in). vdbeaux had 7 bugs found
   & fixed during integration (3 macro/config-gated externs — sqlite3VtabInSync is
   a macro, sqlite3ConnectionUnlocked/sqlite3FileSuffix3 are no-ops, disable/
   enable_simulated_io_errors are SQLITE_TEST-only; SQLITE_LIMIT_VDBE_OP index is 5
