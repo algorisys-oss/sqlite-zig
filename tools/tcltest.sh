@@ -46,7 +46,7 @@ FIXTURE=./testfixture
 # MODULES lists every ported module stem; keep in sync with `ported_modules`
 # in build.zig. Each <stem>.zig is compiled to <stem>_zig.o and swapped in for
 # the upstream src/<stem>.c in the testfixture link command.
-MODULES=(random hash bitvec rowset fault mem1)
+MODULES=(random hash bitvec rowset fault mem1 complete)
 if [ "$ZIG" = 1 ]; then
   for m in "${MODULES[@]}"; do
     zig build-obj -fPIC -fno-stack-check -OReleaseSafe "$PROJ/src/$m.zig" -femit-bin="${m}_zig.o"

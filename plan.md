@@ -78,6 +78,12 @@ patterns (error handling, allocator strategy, C-ABI shims, test parity).
       internals — not a clean leaf)
 - [ ] `mutex*.c` — mutex backends (start with `mutex_noop`, then `mutex_unix`)
 - [ ] `global.c`, `ctime.c`
+- [x] `complete.c` — `sqlite3_complete()` SQL tokenizer → `src/complete.zig`.
+      Config-invariant leaf: a state machine over `sqlite3CtypeMap[]`, no struct
+      coupling (the UTF-16 path passes `sqlite3_value*` opaquely). Validated via
+      main/tclsqlite/enc2 (`db complete` + `complete16`). See
+      [docs/architecture.md](docs/architecture.md) for why deeper modules are
+      blocked on a config foundation.
 
 **Exit criteria:** these modules are Zig; suite green; porting playbook written.
 

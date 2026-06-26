@@ -58,6 +58,7 @@ const ported_modules = [_][]const u8{
     "rowset.c", // -> src/rowset.zig (rowid set / forest of trees)
     "fault.c", // -> src/fault.zig (benign-malloc fault hooks)
     "mem1.c", // -> src/mem1.zig (default system-malloc allocator)
+    "complete.c", // -> src/complete.zig (sqlite3_complete SQL tokenizer)
 };
 
 pub fn build(b: *std.Build) void {

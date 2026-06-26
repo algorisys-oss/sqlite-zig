@@ -4,17 +4,23 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 0 done; Phase 1 in progress (6 modules ported)
+## Current status: Phase 0 done; Phase 1 in progress (7 modules ported)
 
 A Zig build system compiles upstream SQLite C (v3.54.0) into a static
-`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Six leaf
+`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Seven leaf
 utilities are now **ported to Zig** and linked in place of their C versions:
-`random.c`, `hash.c`, `bitvec.c`, `rowset.c`, `fault.c`, `mem1.c`. Each passes
-the functional gate (`zig build test`) and SQLite's own TCL `testfixture` suite
-with the Zig objects swapped in. Notably the Zig `mem1` allocator now backs
-**every** allocation in the engine, validated across a broad cross-subsystem run
-(memsubsys1, malloc5, pragma, index, trigger1, fkey1, json101, savepoint,
-attach, collate1, analyze, where, func, …).
+`random.c`, `hash.c`, `bitvec.c`, `rowset.c`, `fault.c`, `mem1.c`, `complete.c`.
+Each passes the functional gate (`zig build test`) and SQLite's own TCL
+`testfixture` suite with the Zig objects swapped in. Notably the Zig `mem1`
+allocator now backs **every** allocation in the engine, validated across a broad
+cross-subsystem run (memsubsys1, malloc5, pragma, index, trigger1, fkey1,
+json101, savepoint, attach, collate1, analyze, where, func, …).
+
+> **Why progress now slows:** the remaining modules couple to *build-divergent*
+> internal structs (`Mem`, `sqlite3`, `Sqlite3Config`). The `zig build` and
+> `--dev` testfixture configs differ (SQLITE_DEBUG/TEST + ~30 flags), so a single
+> Zig object can't satisfy both for config-dependent modules. The unblock is a
+> comptime config foundation — see [docs/architecture.md](docs/architecture.md).
 
 ### Ports so far (src/*.zig; listed in `ported_modules` in build.zig)
 - `random.c` → `src/random.zig` (+ `src/chacha.zig`) — PRNG; first port.
@@ -36,6 +42,10 @@ attach, collate1, analyze, where, func, …).
   size-prefix strategy (alloc `n+8`, stash size) — both this project's `zig
   build` and the testfixture lack `HAVE_MALLOC_USABLE_SIZE`, so this matches the
   active C path exactly. TCL: memsubsys1/malloc5 + full cross-subsystem run.
+- `complete.c` → `src/complete.zig` — the `sqlite3_complete()` SQL tokenizer
+  (`sqlite3_incomplete`/`sqlite3_complete`/`sqlite3_complete16`). A config-
+  invariant state machine over `sqlite3CtypeMap[]`; no struct coupling (the UTF-16
+  path passes `sqlite3_value*` opaquely). TCL: main/tclsqlite/enc2.
 
 ### Validating ports against the TCL suite
 `tools/tcltest.sh --zig [tests...]` relinks upstream `testfixture` with every
@@ -168,3 +178,7 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   every allocation in the engine. Validated green on the functional gate and a
   broad TCL run (memsubsys1, malloc5, pragma, index, trigger1, fkey1, json101,
   savepoint, attach, collate1, analyze, where, func, bitvec, select1, in, …).
+- 2026-06-26: Ported `complete.c` (`sqlite3_complete`) — 7 modules total.
+  Documented the dual-build config-divergence problem and the struct-coupling
+  taxonomy in `docs/architecture.md` (explains why the next tier needs a comptime
+  config foundation). TCL: main/tclsqlite/enc2 green with Zig objects.
