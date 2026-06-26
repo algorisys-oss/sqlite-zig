@@ -4,14 +4,14 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 0 done; Phase 1 in progress (10 modules ported)
+## Current status: Phase 0 done; Phase 1 in progress (11 modules ported)
 
 A Zig build system compiles upstream SQLite C (v3.54.0) into a static
-`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Ten modules
-are now **ported to Zig** and linked in place of their C versions: `random.c`,
-`hash.c`, `bitvec.c`, `rowset.c`, `fault.c`, `mem1.c`, `complete.c`,
-`memjournal.c` (first storage-layer module), `fts3_hash.c`, `utf.c` (first
-**core-struct-coupled** module).
+`libsqlite3.a` and a working `sqlite3` CLI, with a green test gate. Eleven
+modules are now **ported to Zig** and linked in place of their C versions:
+`random.c`, `hash.c`, `bitvec.c`, `rowset.c`, `fault.c`, `mem1.c`, `complete.c`,
+`memjournal.c`, `fts3_hash.c`, `utf.c` (first **core-struct-coupled** module),
+`os.c` (VFS dispatch — every file I/O now flows through Zig).
 
 The **comptime-config foundation** is in place (build.zig `-Dtestfixture`, the
 `config` options module, the `test-objs` step, and `tools/gen_layout.sh` →
@@ -70,6 +70,15 @@ json101, savepoint, attach, collate1, analyze, where, func, …).
   asserted at comptime vs `src/c_layout.zig`. Reads `db->mallocFailed` at its
   ground-truth offset. TCL: enc/enc2/enc3/enc4 (enc4 = 1115 round-trips) in the
   testfixture (debug) config.
+- `os.c` → `src/os.zig` — the architecture-independent OS interface: `sqlite3Os*`
+  wrappers over the public `sqlite3_file`/`sqlite3_vfs` method tables, plus the
+  VFS registry. Reads `sqlite3Config.iPrngSeed` at its (config-invariant)
+  ground-truth offset; the SQLITE_TEST fault-injection state
+  (`sqlite3_io_error_*` globals + `DO_OS_MALLOC_TEST`) is gated on
+  `config.sqlite_test` via comptime `@export` (so it exists only in the
+  testfixture build, like C's -DSQLITE_TEST). TCL: ioerr (10885), pager1 (1373),
+  lock, mmap1, oserror. (Gotcha fixed: `sqlite3_vfs_unregister(NULL)` must be a
+  no-op — the C `vfsUnlink` has a `pVfs==0` branch.)
 
 ### Validating ports against the TCL suite
 `tools/tcltest.sh --zig [tests...]` relinks upstream `testfixture` with every
@@ -220,3 +229,7 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   src/c_layout.zig). Then ported `utf.c` on it — 10 modules; first core-struct
   (`Mem`) coupled port, layout asserted at comptime against C. enc/enc2/enc3/enc4
   green in the testfixture (debug) config.
+- 2026-06-26: Ported `os.c` (VFS dispatch + registry) on the config foundation —
+  11 modules; every file I/O now flows through Zig. SQLITE_TEST fault-injection
+  state gated on config.sqlite_test via comptime @export. TCL ioerr(10885)/
+  pager1(1373)/lock/mmap1/oserror green.

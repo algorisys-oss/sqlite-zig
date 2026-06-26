@@ -95,7 +95,12 @@ patterns (error handling, allocator strategy, C-ABI shims, test parity).
 
 The interface to the host. Port the Unix path first; defer Windows.
 
-- [ ] `os.c` (VFS dispatch), `os.h`, `os_common.h`
+- [x] `os.c` (VFS dispatch + VFS registry) → `src/os.zig`. Wrappers over the
+      public `sqlite3_file`/`sqlite3_vfs` method tables; reads
+      `sqlite3Config.iPrngSeed` at its ground-truth offset; the SQLITE_TEST
+      fault-injection state (`sqlite3_io_error_*`, `DO_OS_MALLOC_TEST`) gated on
+      `config.sqlite_test`. Validated: ioerr (10885), pager1 (1373), lock,
+      mmap1, oserror in the testfixture config.
 - [ ] `os_unix.c` (file I/O, locking, mmap) — large, ~296 KB
 - [x] `memjournal.c` — in-memory rollback journal → `src/memjournal.zig`.
       Config-invariant: own opaque structs + the public `sqlite3_file`/

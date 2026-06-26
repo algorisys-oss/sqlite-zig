@@ -62,6 +62,7 @@ const ported_modules = [_][]const u8{
     "memjournal.c", // -> src/memjournal.zig (in-memory rollback journal)
     "fts3_hash.c", // -> src/fts3_hash.zig (FTS3 standalone hash table)
     "utf.c", // -> src/utf.zig (UTF-8/16 translation; first Mem-coupled port)
+    "os.c", // -> src/os.zig (VFS/file dispatch + VFS registry)
 };
 
 pub fn build(b: *std.Build) void {
