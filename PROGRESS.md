@@ -272,6 +272,21 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   mutation (crashed sqlite3PcacheInitialize in the testfixture) — changed to
   `extern var` in pcache/os/mem5/threads/mutex. TCL pcache/pcache2/pager1(1373)
   green. 25 modules.
+- 2026-06-26: Ported `printf.c` (the xprintf / `sqlite3_str` formatting engine —
+  used by virtually every subsystem). 26 modules. Two bugs found and fixed:
+  (1) **va_list ABI** — Zig mis-lowers a *by-value* `std.builtin.VaList`
+  parameter received across the C ABI; `@cVaArg`/`@cVaCopy` on it GP-faults at
+  runtime (the prior `@cVaCopy(&ap_in)` workaround crashed at the first arg).
+  On x86-64 SysV a C `va_list` param is already a pointer to `__va_list_tag`, so
+  every va_list-receiving fn now takes `*VaList` and variadic origins forward
+  `&ap` from `@cVaStart()`. Isolated via a C→Zig→Zig micro-test before fixing.
+  (2) **`%z` NULL** — `sbufpt = @cVaArg(...) orelse ""` then *unconditionally*
+  entered the `%z` adopt-allocation fast-path, calling `sqlite3DbMallocSize` on
+  the static `""` (mem1 alignment panic, hit via fts5 `"%z%s?%d"` with a NULL
+  seed). Restructured to upstream's `if(bufpt==0) bufpt=""` **else-if**
+  etDYNSTRING so a NULL arg skips adoption. TCL --zig green: printf(1439)/
+  printf2(51)/format4/func(15031)/func2/e_expr(16619)/select1/where2/misc1/misc3/
+  randexpr1/in; engine_test 18/18; functional + amalgamation builds green.
 
 ### Resume guide — continuing the agent-parallelized migration
 The authoritative ordered list of ported modules (with one-line descriptions) is

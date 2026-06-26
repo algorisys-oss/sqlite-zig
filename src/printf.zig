@@ -58,14 +58,22 @@
 //! both builds; we use the strchr-or-end path.
 //!
 //! ─── va_list ──────────────────────────────────────────────────────────────
-//! The format engine consumes a `va_list`. The Zig `sqlite3_str_vappendf`,
-//! `sqlite3VMPrintf`, `sqlite3_vmprintf`, `sqlite3_vsnprintf` take a
-//! `std.builtin.VaList` and consume it with `@cVaArg(&ap, T)` exactly as the C
-//! `va_arg(ap,T)` did (matching C integer widths: int / long int / i64 /
-//! unsigned int / unsigned long int / u64 / double / pointer). The variadic
-//! wrappers (`sqlite3MPrintf`, `sqlite3_mprintf`, `sqlite3_snprintf`,
+//! The format engine consumes a `va_list`. The Zig functions that *receive* a
+//! `va_list` from C (`sqlite3_str_vappendf`, `sqlite3VMPrintf`,
+//! `sqlite3_vmprintf`, `sqlite3_vsnprintf`, `renderLogMsg`) take a
+//! `*std.builtin.VaList` — NOT a by-value `VaList` — and consume it with
+//! `@cVaArg(ap,T)` exactly as C `va_arg(ap,T)` did (matching C widths: int /
+//! long int / i64 / unsigned int / unsigned long int / u64 / double / pointer).
+//!
+//! Why a pointer: on the x86-64 SysV ABI a C `va_list` is `__va_list_tag[1]`,
+//! so a `va_list` *parameter* is passed as a pointer to that tag. A C caller
+//! passing `ap` is therefore ABI-identical to passing `&ap` (a `*VaList`).
+//! Zig, however, mis-lowers a *by-value* `VaList` parameter received across the
+//! C ABI: `@cVaArg`/`@cVaCopy` on it general-protection-faults at runtime.
+//! Declaring the parameter `*VaList` matches the real C ABI and works. The
+//! variadic wrappers (`sqlite3MPrintf`, `sqlite3_mprintf`, `sqlite3_snprintf`,
 //! `sqlite3_log`, `sqlite3DebugPrintf`, `sqlite3_str_appendf`) do `@cVaStart()`
-//! and forward the VaList. Forwarding compiles and links cleanly (verified).
+//! into a local and forward its address (`&ap`).
 //!
 //! No standalone Zig unit test is feasible — the engine couples to the live
 //! allocator, connection, FpDecode, and the public sqlite3_value_* API.
@@ -291,7 +299,7 @@ const Select = extern struct {
     iLimit: c_int,
     iOffset: c_int,
     selId: u32,
-    _tail: [96]u8, // sizeof(Select)==120; 24 bytes consumed above
+    _tail: [100]u8, // sizeof(Select)==120; offset 20 reached above
 };
 comptime {
     std.debug.assert(@sizeOf(Select) == 120);
@@ -383,11 +391,11 @@ inline fn parseZTail(pParse: ?*anyopaque) ?[*:0]const u8 {
 // c_layout entries requested but not yet generated are read at the
 // probe-verified (config-invariant for these particular fields) offsets, with
 // a comptime preference for the c_layout symbol once added.
-const sqlite3_errByteOffset_off: usize = if (@hasDecl(@TypeOf(L), "sqlite3_errByteOffset")) L.sqlite3_errByteOffset else 84;
-const sqlite3_pParse_off: usize = if (@hasDecl(@TypeOf(L), "sqlite3_pParse")) L.sqlite3_pParse else 344;
-const Parse_zTail_off: usize = if (@hasDecl(@TypeOf(L), "Parse_zTail")) L.Parse_zTail else 336;
-const Sqlite3Config_xLog_off: usize = if (@hasDecl(@TypeOf(L), "Sqlite3Config_xLog")) L.Sqlite3Config_xLog else 376;
-const Sqlite3Config_pLogArg_off: usize = if (@hasDecl(@TypeOf(L), "Sqlite3Config_pLogArg")) L.Sqlite3Config_pLogArg else 384;
+const sqlite3_errByteOffset_off: usize = if (@hasDecl(L, "sqlite3_errByteOffset")) L.sqlite3_errByteOffset else 84;
+const sqlite3_pParse_off: usize = if (@hasDecl(L, "sqlite3_pParse")) L.sqlite3_pParse else 344;
+const Parse_zTail_off: usize = if (@hasDecl(L, "Parse_zTail")) L.Parse_zTail else 336;
+const Sqlite3Config_xLog_off: usize = if (@hasDecl(L, "Sqlite3Config_xLog")) L.Sqlite3Config_xLog else 376;
+const Sqlite3Config_pLogArg_off: usize = if (@hasDecl(L, "Sqlite3Config_pLogArg")) L.Sqlite3Config_pLogArg else 384;
 
 const XLogFn = ?*const fn (?*anyopaque, c_int, ?[*:0]const u8) callconv(.c) void;
 inline fn configXLog() XLogFn {
@@ -442,9 +450,7 @@ fn printfTempBuf(pAccum: *StrAccum, n: i64) ?[*]u8 {
 }
 
 // ─── The format engine ─────────────────────────────────────────────────────
-export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: VaList) callconv(.c) void {
-    var ap = @cVaCopy(@constCast(&ap_in));
-    defer @cVaEnd(&ap);
+export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap: *VaList) callconv(.c) void {
 
     var fmt: [*:0]const u8 = fmt_in;
     var c: u8 = undefined; // next char in format
@@ -480,7 +486,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
     std.debug.assert(pAccum.nChar > 0 or (pAccum.printfFlags & SQLITE_PRINTF_MALLOCED) == 0);
 
     if ((pAccum.printfFlags & SQLITE_PRINTF_SQLFUNC) != 0) {
-        pArgList = @ptrCast(@alignCast(@cVaArg(&ap, ?*anyopaque)));
+        pArgList = @ptrCast(@alignCast(@cVaArg(ap,?*anyopaque)));
         bArgList = 1;
     } else {
         bArgList = 0;
@@ -560,7 +566,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                     if (bArgList != 0) {
                         width = @intCast(getIntArg(pArgList.?));
                     } else {
-                        width = @cVaArg(&ap, c_int);
+                        width = @cVaArg(ap,c_int);
                     }
                     if (width < 0) {
                         flag_leftjustify = 1;
@@ -581,7 +587,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                         if (bArgList != 0) {
                             precision = @intCast(getIntArg(pArgList.?));
                         } else {
-                            precision = @cVaArg(&ap, c_int);
+                            precision = @cVaArg(ap,c_int);
                         }
                         if (precision < 0) {
                             precision = if (precision >= -2147483647) -precision else -1;
@@ -644,12 +650,12 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                         v = getIntArg(pArgList.?);
                     } else if (flag_long != 0) {
                         if (flag_long == 2) {
-                            v = @cVaArg(&ap, i64);
+                            v = @cVaArg(ap,i64);
                         } else {
-                            v = @cVaArg(&ap, c_long);
+                            v = @cVaArg(ap,c_long);
                         }
                     } else {
-                        v = @cVaArg(&ap, c_int);
+                        v = @cVaArg(ap,c_int);
                     }
                     if (v < 0) {
                         longvalue = ~@as(u64, @bitCast(v));
@@ -664,12 +670,12 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                         longvalue = @bitCast(getIntArg(pArgList.?));
                     } else if (flag_long != 0) {
                         if (flag_long == 2) {
-                            longvalue = @cVaArg(&ap, u64);
+                            longvalue = @cVaArg(ap,u64);
                         } else {
-                            longvalue = @cVaArg(&ap, c_ulong);
+                            longvalue = @cVaArg(ap,c_ulong);
                         }
                     } else {
-                        longvalue = @cVaArg(&ap, c_uint);
+                        longvalue = @cVaArg(ap,c_uint);
                     }
                     prefix = 0;
                 }
@@ -724,7 +730,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                 if (cThousand != 0) {
                     var nn: c_int = @divTrunc(length - 1, 3);
                     var ix: c_int = @rem(length - 1, 3) + 1;
-                    bufpt -= @intCast(nn);
+                    bufpt -= @as(usize, @intCast(nn));
                     idx = 0;
                     while (nn > 0) : (idx += 1) {
                         bufpt[@intCast(idx)] = bufpt[@intCast(idx + nn)];
@@ -759,7 +765,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                 if (bArgList != 0) {
                     realvalue = getDoubleArg(pArgList.?);
                 } else {
-                    realvalue = @cVaArg(&ap, f64);
+                    realvalue = @cVaArg(ap,f64);
                 }
                 if (precision < 0) precision = 6;
                 if (precision > SQLITE_FP_PRECISION_LIMIT) precision = SQLITE_FP_PRECISION_LIMIT;
@@ -910,12 +916,12 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                     }
                 }
                 if (flag_rtz != 0 and flag_dp != 0) {
-                    while (bufpt[-1] == '0') {
+                    while ((bufpt - 1)[0] == '0') {
                         bufpt -= 1;
                         bufpt[0] = 0;
                     }
                     std.debug.assert(@intFromPtr(bufpt) > @intFromPtr(zOut));
-                    if (bufpt[-1] == '.') {
+                    if ((bufpt - 1)[0] == '.') {
                         if (flag_altform2 != 0) {
                             bufpt[0] = '0';
                             bufpt += 1;
@@ -977,7 +983,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
             },
             etSIZE => {
                 if (bArgList == 0) {
-                    const pn = @cVaArg(&ap, *c_int);
+                    const pn = @cVaArg(ap,*c_int);
                     pn.* = @intCast(pAccum.nChar);
                 }
                 length = 0;
@@ -1008,7 +1014,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                         buf[0] = 0;
                     }
                 } else {
-                    const ch = @cVaArg(&ap, c_uint);
+                    const ch = @cVaArg(ap,c_uint);
                     length = sqlite3AppendOneUtf8Character(&buf, ch);
                 }
                 if (precision > 1) {
@@ -1055,14 +1061,18 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
             },
             etSTRING, etDYNSTRING => {
                 var sbufpt: [*:0]const u8 = undefined;
+                var bufpt_null = false;
                 if (bArgList != 0) {
-                    sbufpt = getTextArg(pArgList.?) orelse "";
+                    if (getTextArg(pArgList.?)) |a| sbufpt = a else bufpt_null = true;
                     xtype = etSTRING;
                 } else {
-                    sbufpt = @cVaArg(&ap, ?[*:0]const u8) orelse "";
+                    if (@cVaArg(ap, ?[*:0]const u8)) |a| sbufpt = a else bufpt_null = true;
                 }
                 var did_break = false;
-                if (xtype == etDYNSTRING) {
+                if (bufpt_null) {
+                    // Upstream: NULL arg → "" and skip the %z adoption path.
+                    sbufpt = "";
+                } else if (xtype == etDYNSTRING) {
                     if (pAccum.nChar == 0 and pAccum.mxAlloc != 0 and width == 0 and precision < 0 and pAccum.accError == 0) {
                         std.debug.assert((pAccum.printfFlags & SQLITE_PRINTF_MALLOCED) == 0);
                         pAccum.zText = @constCast(sbufpt);
@@ -1125,7 +1135,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                 continue;
             },
             etESCAPE_j, etESCAPE_J => {
-                renderJson(pAccum, &ap, pArgList, bArgList, xtype, precision, width, flag_altform2, flag_leftjustify);
+                renderJson(pAccum, ap, pArgList, bArgList, xtype, precision, width, flag_altform2, flag_leftjustify);
                 continue;
             },
             etESCAPE_q, etESCAPE_Q, etESCAPE_w => {
@@ -1133,7 +1143,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                 const escarg_opt: ?[*:0]const u8 = if (bArgList != 0)
                     getTextArg(pArgList.?)
                 else
-                    @cVaArg(&ap, ?[*:0]const u8);
+                    @cVaArg(ap,?[*:0]const u8);
                 var needQuote: c_int = 0;
                 var escarg: [*:0]const u8 = undefined;
                 if (escarg_opt == null) {
@@ -1281,7 +1291,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
             etTOKEN => {
                 if ((pAccum.printfFlags & SQLITE_PRINTF_INTERNAL) == 0) return;
                 if (flag_alternateform != 0) {
-                    const pExpr = @cVaArg(&ap, ?*Expr);
+                    const pExpr = @cVaArg(ap,?*Expr);
                     if (pExpr) |e| {
                         if (!exprHasProperty(e, EP_IntValue)) {
                             sqlite3_str_appendall(pAccum, @ptrCast(e.u.zToken.?));
@@ -1289,7 +1299,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
                         }
                     }
                 } else {
-                    const pToken = @cVaArg(&ap, ?*Token);
+                    const pToken = @cVaArg(ap,?*Token);
                     std.debug.assert(bArgList == 0);
                     if (pToken) |tk| {
                         if (tk.n != 0) {
@@ -1303,7 +1313,7 @@ export fn sqlite3_str_vappendf(pAccum: *StrAccum, fmt_in: [*:0]const u8, ap_in: 
             },
             etSRCITEM => {
                 if ((pAccum.printfFlags & SQLITE_PRINTF_INTERNAL) == 0) return;
-                const pItem = @cVaArg(&ap, *SrcItem);
+                const pItem = @cVaArg(ap,*SrcItem);
                 std.debug.assert(bArgList == 0);
                 const fg = fgBits(pItem);
                 if (pItem.zAlias != null and flag_altform2 == 0) {
@@ -1364,7 +1374,7 @@ fn renderJson(
     width: c_int,
     flag_altform2: u8,
     flag_leftjustify: u8,
-) void {
+) callconv(.c) void {
     var escarg: ?[*:0]const u8 = undefined;
     if (bArgList != 0) {
         escarg = getTextArg(pArgList.?);
@@ -1589,7 +1599,7 @@ export fn sqlite3StrAccumFinish(p: *StrAccum) callconv(.c) ?[*:0]u8 {
 }
 
 export fn sqlite3_str_finish(p: ?*StrAccum) callconv(.c) ?[*:0]u8 {
-    if (p != null and p.? != @as(*StrAccum, @ptrCast(@alignCast(&sqlite3OomStr)))) {
+    if (p != null and p.? != oomStrPtr()) {
         const z = sqlite3StrAccumFinish(p.?);
         sqlite3_free(p);
         return z;
@@ -1625,7 +1635,7 @@ export fn sqlite3_str_reset(p: *StrAccum) callconv(.c) void {
     if (isMalloced(p)) {
         sqlite3DbFree(p.db, p.zText);
         p.printfFlags &= ~SQLITE_PRINTF_MALLOCED;
-    } else if (p == @as(*StrAccum, @ptrCast(@alignCast(&sqlite3OomStr)))) {
+    } else if (p == oomStrPtr()) {
         return;
     }
     p.nAlloc = 0;
@@ -1634,7 +1644,7 @@ export fn sqlite3_str_reset(p: *StrAccum) callconv(.c) void {
 }
 
 export fn sqlite3_str_free(p: ?*StrAccum) callconv(.c) void {
-    if (p != null and p.? != @as(*StrAccum, @ptrCast(@alignCast(&sqlite3OomStr)))) {
+    if (p != null and p.? != oomStrPtr()) {
         sqlite3_str_reset(p.?);
         sqlite3_free(p);
     }
@@ -1651,6 +1661,9 @@ export fn sqlite3StrAccumInit(p: *StrAccum, db: ?*anyopaque, zBase: ?[*]u8, n: c
 }
 
 extern const sqlite3OomStr: StrAccum;
+inline fn oomStrPtr() *StrAccum {
+    return @constCast(&sqlite3OomStr);
+}
 
 export fn sqlite3_str_new(db: ?*anyopaque) callconv(.c) ?*StrAccum {
     const p: ?*StrAccum = @ptrCast(@alignCast(sqlite3_malloc64(@sizeOf(StrAccum))));
@@ -1662,7 +1675,7 @@ export fn sqlite3_str_new(db: ?*anyopaque) callconv(.c) ?*StrAccum {
 }
 
 // ─── printf wrappers ───────────────────────────────────────────────────────
-export fn sqlite3VMPrintf(db: ?*anyopaque, zFormat: [*:0]const u8, ap: VaList) callconv(.c) ?[*:0]u8 {
+export fn sqlite3VMPrintf(db: ?*anyopaque, zFormat: [*:0]const u8, ap: *VaList) callconv(.c) ?[*:0]u8 {
     var acc: StrAccum = undefined;
     var zBase: [SQLITE_PRINT_BUF_SIZE]u8 = undefined;
     std.debug.assert(db != null);
@@ -1677,10 +1690,10 @@ export fn sqlite3VMPrintf(db: ?*anyopaque, zFormat: [*:0]const u8, ap: VaList) c
 export fn sqlite3MPrintf(db: ?*anyopaque, zFormat: [*:0]const u8, ...) callconv(.c) ?[*:0]u8 {
     var ap = @cVaStart();
     defer @cVaEnd(&ap);
-    return sqlite3VMPrintf(db, zFormat, ap);
+    return sqlite3VMPrintf(db, zFormat, &ap);
 }
 
-export fn sqlite3_vmprintf(zFormat: [*:0]const u8, ap: VaList) callconv(.c) ?[*:0]u8 {
+export fn sqlite3_vmprintf(zFormat: [*:0]const u8, ap: *VaList) callconv(.c) ?[*:0]u8 {
     var acc: StrAccum = undefined;
     var zBase: [SQLITE_PRINT_BUF_SIZE]u8 = undefined;
     // SQLITE_ENABLE_API_ARMOR off. SQLITE_OMIT_AUTOINIT off.
@@ -1694,10 +1707,10 @@ export fn sqlite3_mprintf(zFormat: [*:0]const u8, ...) callconv(.c) ?[*:0]u8 {
     if (sqlite3_initialize() != 0) return null;
     var ap = @cVaStart();
     defer @cVaEnd(&ap);
-    return sqlite3_vmprintf(zFormat, ap);
+    return sqlite3_vmprintf(zFormat, &ap);
 }
 
-export fn sqlite3_vsnprintf(n: c_int, zBuf: [*]u8, zFormat: [*:0]const u8, ap: VaList) callconv(.c) ?[*]u8 {
+export fn sqlite3_vsnprintf(n: c_int, zBuf: [*]u8, zFormat: [*:0]const u8, ap: *VaList) callconv(.c) ?[*]u8 {
     var acc: StrAccum = undefined;
     if (n <= 0) return zBuf;
     // SQLITE_ENABLE_API_ARMOR off.
@@ -1713,13 +1726,13 @@ export fn sqlite3_snprintf(n: c_int, zBuf: [*]u8, zFormat: [*:0]const u8, ...) c
     sqlite3StrAccumInit(&acc, null, zBuf, n, 0);
     var ap = @cVaStart();
     defer @cVaEnd(&ap);
-    sqlite3_str_vappendf(&acc, zFormat, ap);
+    sqlite3_str_vappendf(&acc, zFormat, &ap);
     zBuf[acc.nChar] = 0;
     return zBuf;
 }
 
 // ─── sqlite3_log ───────────────────────────────────────────────────────────
-fn renderLogMsg(iErrCode: c_int, zFormat: [*:0]const u8, ap: VaList) void {
+fn renderLogMsg(iErrCode: c_int, zFormat: [*:0]const u8, ap: *VaList) void {
     var acc: StrAccum = undefined;
     var zMsg: [SQLITE_MAX_LOG_MESSAGE]u8 = undefined;
     sqlite3StrAccumInit(&acc, null, &zMsg, @intCast(zMsg.len), 0);
@@ -1731,7 +1744,7 @@ export fn sqlite3_log(iErrCode: c_int, zFormat: [*:0]const u8, ...) callconv(.c)
     if (configXLog() != null) {
         var ap = @cVaStart();
         defer @cVaEnd(&ap);
-        renderLogMsg(iErrCode, zFormat, ap);
+        renderLogMsg(iErrCode, zFormat, &ap);
     }
 }
 
@@ -1747,7 +1760,7 @@ fn sqlite3DebugPrintf(zFormat: [*:0]const u8, ...) callconv(.c) void {
     sqlite3StrAccumInit(&acc, null, &zBuf, @intCast(zBuf.len), 0);
     var ap = @cVaStart();
     defer @cVaEnd(&ap);
-    sqlite3_str_vappendf(&acc, zFormat, ap);
+    sqlite3_str_vappendf(&acc, zFormat, &ap);
     _ = sqlite3StrAccumFinish(&acc);
     // SQLITE_OS_TRACE_PROC not defined: fprintf to stdout.
     _ = fprintf(stdout, "%s", @as([*:0]const u8, @ptrCast(&zBuf)));
@@ -1758,7 +1771,7 @@ fn sqlite3DebugPrintf(zFormat: [*:0]const u8, ...) callconv(.c) void {
 export fn sqlite3_str_appendf(p: *StrAccum, zFormat: [*:0]const u8, ...) callconv(.c) void {
     var ap = @cVaStart();
     defer @cVaEnd(&ap);
-    sqlite3_str_vappendf(p, zFormat, ap);
+    sqlite3_str_vappendf(p, zFormat, &ap);
 }
 
 // ─── Reference-counted string/blob storage (RCStr) ─────────────────────────

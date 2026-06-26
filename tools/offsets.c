@@ -44,6 +44,9 @@ int main(void) {
     P(sqlite3, mutex); /* legacy.c (sqlite3_exec) */
     P(sqlite3, flags);
     P(sqlite3, errMask);
+    P(sqlite3, errByteOffset); /* printf.c — error-offset helpers */
+    P(sqlite3, pParse);
+    P(Parse, zTail);
 
     /* Vdbe — vdbetrace.c reads db/nVar/aVar/pVList. */
     P(Vdbe, db);
@@ -63,6 +66,8 @@ int main(void) {
     P(Sqlite3Config, pcache2); /* pcache.c dispatches through this embedded methods sub-struct */
     P(Sqlite3Config, pPage); /* pcache1.c — SQLITE_CONFIG_PAGECACHE buffer */
     P(Sqlite3Config, nPage);
+    P(Sqlite3Config, xLog); /* printf.c — sqlite3_log */
+    P(Sqlite3Config, pLogArg);
 
     /* PgHdr — pcache.c; ABI-shared (defined in pcache.h, the pager reads it). */
     SZ(PgHdr, PgHdr);
