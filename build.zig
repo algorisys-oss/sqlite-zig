@@ -101,6 +101,7 @@ const ported_modules = [_][]const u8{
     "vdbeapi.c", // -> src/vdbeapi.zig (step/column/bind/result public API)
     "vdbeaux.c", // -> src/vdbeaux.zig (bytecode assembly + record/serial codec)
     "walker.c", // -> src/walker.zig (Expr/Select AST walker)
+    "update.c", // -> src/update.zig (UPDATE statement codegen)
 };
 
 pub fn build(b: *std.Build) void {

@@ -1553,9 +1553,9 @@ export fn sqlite3VdbeFreeCursor(p: ?*Vdbe, pCx: ?*VdbeCursor) callconv(.c) void 
 }
 fn freeCursorWithCache(p: ?*Vdbe, pCx: ?*VdbeCursor) void {
     const pCache = rdPtr(pCx, VdbeCursor_pCache);
-    // pCx->colCache bit cleared, pCache cleared. colCache is a bitfield in the
-    // flags byte; we don't need to clear the bit precisely because the cursor
-    // is being freed. Clear pCache pointer.
+    // MUST clear the colCache bit before the recursive FreeCursorNN below, or it
+    // re-enters this fn with pCache already null → crash. (C: pCx->colCache=0.)
+    wrU8(pCx, VdbeCursor_bits, rdU8(pCx, VdbeCursor_bits) & ~COLCACHE_BIT);
     wrPtr(pCx, VdbeCursor_pCache, null);
     // VdbeTxtBlbCache: { RCStr *pCValue; ... } pCValue at offset 0.
     const pCValue = rdPtr(pCache, 0);
