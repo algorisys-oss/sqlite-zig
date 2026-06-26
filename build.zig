@@ -105,6 +105,7 @@ const ported_modules = [_][]const u8{
     "delete.c", // -> src/delete.zig (DELETE statement codegen)
     "insert.c", // -> src/insert.zig (INSERT statement codegen)
     "build.c", // -> src/build.zig (schema/DDL codegen: CREATE/DROP TABLE/INDEX/VIEW)
+    "analyze.c", // -> src/analyze.zig (ANALYZE / index statistics)
     "resolve.c", // -> src/resolve.zig (name resolution)
     "vdbe.c", // -> src/vdbe.zig (bytecode interpreter: sqlite3VdbeExec dispatch loop)
     "func.c", // -> src/func.zig (built-in SQL scalar/aggregate functions)

@@ -53,6 +53,15 @@ const Db = struct {
             return error.ExecFailed;
         }
     }
+    /// Like `exec`, but the statement is expected to fail (e.g. a constraint
+    /// violation). Returns the error silently — no stderr diagnostic — so a
+    /// successful test run produces no spurious output. (Writing to stderr
+    /// mid-test confuses the `--listen=-` build-runner protocol and was the
+    /// cause of rare false "failed command" reports from `zig build test`.)
+    fn execExpectFail(self: *Db, sql: [*:0]const u8) !void {
+        if (sqlite3_exec(self.h, sql, null, null, null) == SQLITE_OK) return error.UnexpectedOk;
+        return error.ExecFailed;
+    }
     /// Run a query expected to yield exactly one integer in the first column.
     fn scalarI64(self: *Db, sql: [*:0]const u8) !i64 {
         var stmt: ?*anyopaque = null;
@@ -281,8 +290,40 @@ test "foreign key enforcement" {
     try db.exec("INSERT INTO parent VALUES(1),(2)");
     try db.exec("INSERT INTO child VALUES(1)");
     // Inserting a child with no matching parent must fail.
-    try testing.expectError(error.ExecFailed, db.exec("INSERT INTO child VALUES(99)"));
+    try testing.expectError(error.ExecFailed, db.execExpectFail("INSERT INTO child VALUES(99)"));
     try testing.expectEqual(@as(i64, 1), try db.scalarI64("SELECT count(*) FROM child"));
+}
+
+// Exercises the ported analyze.zig (module 59): the ANALYZE command writes
+// sqlite_stat1 (statInit/statPush/openStatTable), and sqlite3AnalysisLoad reads
+// it back on the next prepare so the planner consumes the stats. The functional
+// battery never runs ANALYZE, so this is the only gate-level coverage.
+test "ANALYZE writes and loads index statistics" {
+    var db = try Db.open();
+    defer db.close();
+    try db.exec("CREATE TABLE t(a,b,c)");
+    try db.exec("CREATE INDEX i1 ON t(a,b)");
+    try db.exec("CREATE INDEX i2 ON t(c)");
+    // 1000 rows: a has 10 distinct values, b has 7, c is unique.
+    try db.exec(
+        \\INSERT INTO t WITH RECURSIVE g(x) AS (
+        \\  SELECT 1 UNION ALL SELECT x+1 FROM g WHERE x<1000)
+        \\SELECT x%10, x%7, x FROM g
+    );
+    try db.exec("ANALYZE");
+    var buf: [128]u8 = undefined;
+    // sqlite_stat1: i1 → 1000 rows, ~100 per a, ~15 per (a,b); i2 → unique.
+    try testing.expectEqualStrings(
+        "1000 100 15|1000 1",
+        try db.rows("SELECT stat FROM sqlite_stat1 ORDER BY idx", &buf),
+    );
+    // ANALYZE ends by calling sqlite3AnalysisLoad to reload the stats it just
+    // wrote; running a planned query afterward must succeed with those stats
+    // live (TF_HasStat1) rather than crash on the loaded aiRowLogEst arrays.
+    try testing.expectEqual(
+        @as(i64, 100),
+        try db.scalarI64("SELECT count(*) FROM t WHERE a=5"),
+    );
 }
 
 test "view and trigger" {

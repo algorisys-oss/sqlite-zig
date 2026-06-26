@@ -4,7 +4,27 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 53 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 59 modules ported, incl. the full VDBE interpreter
+
+**Latest (59th module): `analyze.c` → `src/analyze.zig` — the ANALYZE command
+(statInit/statPush/openStatTable writing `sqlite_stat1`) and
+`sqlite3AnalysisLoad`/`analysisLoader` (reading stats back so the planner uses
+them). Gold-validated: all upstream `analyze*` TCL tests pass with the Zig
+module linked in (`analyze`=41, `analyze7`=16, `analyzeC`=25, … 0 errors
+across 13 files), plus a new in-gate `engine_test` ANALYZE case (the functional
+battery never exercised ANALYZE). STAT4 is off in this config, so the sampling
+paths are compiled out.**
+
+While integrating it, ran down a long-standing **false-alarm flake** in
+`zig build test`: rare "exec error: FOREIGN KEY constraint failed" + "failed
+command" reports. Root cause was *not* an engine bug — the `engine_test.zig`
+`exec()` helper unconditionally wrote the errmsg to stderr even for the FK
+test's *expected* constraint failure, and a mid-test stderr write occasionally
+upset the Zig `--listen=-` build-runner protocol. The engine binary itself
+passes 0/600 seed orderings with non-zero exit. Fixed by adding a silent
+`execExpectFail()` helper for statements expected to fail. (analyze.zig was
+exonerated early: the flake reproduced identically with C `analyze.c`.)
+
 
 **Milestone (this commit): `vdbe.c` → `src/vdbe.zig` — the 9.5k-LOC bytecode
 interpreter (`sqlite3VdbeExec`) now runs in Zig.** All 192 opcodes are handled;
