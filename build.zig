@@ -83,6 +83,7 @@ const ported_modules = [_][]const u8{
     "callback.c", // -> src/callback.zig (collation/function callback lookup)
     "vdbevtab.c", // -> src/vdbevtab.zig (bytecode() virtual table)
     "util.c", // -> src/util.zig (varint, atoi/atof, error/progress helpers)
+    "loadext.c", // -> src/loadext.zig (runtime extension loading + api table)
 };
 
 pub fn build(b: *std.Build) void {

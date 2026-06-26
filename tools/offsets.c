@@ -100,6 +100,9 @@ int main(void) {
     P(Column, zCnName);
     P(Column, colFlags);
     P(Sqlite3Config, xTestCallback);
+    /* loadext.c — extension registry on the connection. */
+    P(sqlite3, nExtension);
+    P(sqlite3, aExtension);
 
     /* Vdbe — vdbetrace.c reads db/nVar/aVar/pVList. */
     P(Vdbe, db);
