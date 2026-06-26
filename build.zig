@@ -95,6 +95,7 @@ const ported_modules = [_][]const u8{
     "fkey.c", // -> src/fkey.zig (foreign-key constraint codegen)
     "trigger.c", // -> src/trigger.zig (trigger machinery + sub-program codegen)
     "pager.c", // -> src/pager.zig (pager: page txns, rollback journal, savepoints)
+    "wal.c", // -> src/wal.zig (write-ahead log)
 };
 
 pub fn build(b: *std.Build) void {
