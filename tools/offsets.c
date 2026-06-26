@@ -37,8 +37,12 @@ int main(void) {
     P(sqlite3, mallocFailed);
     P(sqlite3, errCode);
 
-    /* Sqlite3Config — os.c reads sqlite3Config.iPrngSeed. */
+    /* Sqlite3Config — os.c reads iPrngSeed; mem5.c reads nHeap/pHeap/mnReq/bMemstat. */
     SZ(Sqlite3Config, Sqlite3Config);
     P(Sqlite3Config, iPrngSeed);
+    P(Sqlite3Config, nHeap);
+    P(Sqlite3Config, pHeap);
+    P(Sqlite3Config, mnReq);
+    P(Sqlite3Config, bMemstat);
     return 0;
 }

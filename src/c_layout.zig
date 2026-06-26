@@ -25,6 +25,10 @@ const prod = struct {
     pub const sqlite3_errCode: usize = 80;
     pub const sizeof_Sqlite3Config: usize = 440;
     pub const Sqlite3Config_iPrngSeed: usize = 432;
+    pub const Sqlite3Config_nHeap: usize = 280;
+    pub const Sqlite3Config_pHeap: usize = 272;
+    pub const Sqlite3Config_mnReq: usize = 284;
+    pub const Sqlite3Config_bMemstat: usize = 0;
 };
 
 /// --dev testfixture config (SQLITE_DEBUG + SQLITE_TEST).
@@ -45,6 +49,10 @@ const tf = struct {
     pub const sqlite3_errCode: usize = 80;
     pub const sizeof_Sqlite3Config: usize = 488;
     pub const Sqlite3Config_iPrngSeed: usize = 432;
+    pub const Sqlite3Config_nHeap: usize = 280;
+    pub const Sqlite3Config_pHeap: usize = 272;
+    pub const Sqlite3Config_mnReq: usize = 284;
+    pub const Sqlite3Config_bMemstat: usize = 0;
 };
 
 /// The layout namespace matching the current build.
