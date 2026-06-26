@@ -67,8 +67,25 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
     const use_amalgamation = b.option(bool, "amalgamation", "Build the single-file amalgamation instead of the per-file split build") orelse false;
+    // When true, ported Zig objects are compiled with the upstream `--dev`
+    // testfixture configuration (SQLITE_DEBUG, SQLITE_TEST) instead of the
+    // production library config. tools/tcltest.sh uses this so the Zig objects'
+    // struct layouts / test instrumentation match the testfixture C they link
+    // against. See docs/architecture.md. The flags live in the build-generated
+    // `config` options module below, imported by each ported object as
+    // `@import("config")`.
+    const testfixture = b.option(bool, "testfixture", "Compile ported Zig objects with the --dev testfixture config (for tcltest.sh)") orelse false;
 
     const include_dir: []const u8 = if (use_amalgamation) "vendor/amalg" else "vendor/tsrc";
+
+    // Comptime config mirroring the C `-D` flags that affect ported modules'
+    // struct layouts and behavior. Each ported object imports this as
+    // `@import("config")`; the values differ between the production library and
+    // the testfixture build, exactly as C's -D flags do.
+    const cfg = b.addOptions();
+    cfg.addOption(bool, "sqlite_debug", testfixture);
+    cfg.addOption(bool, "sqlite_test", testfixture);
+    const cfg_mod = cfg.createModule();
 
     const lib_mod = b.createModule(.{
         .target = target,
@@ -87,15 +104,37 @@ pub fn build(b: *std.Build) void {
         for (ported_modules) |m| {
             const stem = m[0 .. m.len - 2];
             const zig_name = b.fmt("src/{s}.zig", .{stem});
-            const obj = b.addObject(.{
-                .name = stem,
-                .root_module = b.createModule(.{
-                    .root_source_file = b.path(zig_name),
-                    .target = target,
-                    .optimize = optimize,
-                }),
+            const obj_mod = b.createModule(.{
+                .root_source_file = b.path(zig_name),
+                .target = target,
+                .optimize = optimize,
             });
+            obj_mod.addImport("config", cfg_mod);
+            const obj = b.addObject(.{ .name = stem, .root_module = obj_mod });
             lib_mod.addObject(obj);
+        }
+    }
+
+    // `zig build test-objs [-Dtestfixture=true]` — emit each ported Zig module
+    // as a standalone object into zig-out/test-objs/<name>.o, compiled
+    // ReleaseSafe + PIC + no-stack-probe so tools/tcltest.sh can link them into
+    // the upstream testfixture in place of the matching C file.
+    {
+        const test_objs_step = b.step("test-objs", "Emit ported Zig objects for tcltest.sh (use -Dtestfixture=true)");
+        for (ported_modules) |m| {
+            const stem = m[0 .. m.len - 2];
+            const zig_name = b.fmt("src/{s}.zig", .{stem});
+            const tobj_mod = b.createModule(.{
+                .root_source_file = b.path(zig_name),
+                .target = target,
+                .optimize = .ReleaseSafe,
+                .pic = true,
+                .stack_check = false,
+            });
+            tobj_mod.addImport("config", cfg_mod);
+            const tobj = b.addObject(.{ .name = stem, .root_module = tobj_mod });
+            const inst = b.addInstallFileWithDir(tobj.getEmittedBin(), .prefix, b.fmt("test-objs/{s}.o", .{stem}));
+            test_objs_step.dependOn(&inst.step);
         }
     }
 

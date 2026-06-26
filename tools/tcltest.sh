@@ -44,18 +44,22 @@ FIXTURE=./testfixture
 
 # 3. Optionally relink with our Zig object(s) swapping the matching C file(s).
 # MODULES lists every ported module stem; keep in sync with `ported_modules`
-# in build.zig. Each <stem>.zig is compiled to <stem>_zig.o and swapped in for
-# the upstream src/<stem>.c in the testfixture link command.
+# in build.zig. The Zig objects are emitted by `zig build test-objs
+# -Dtestfixture=true`, which compiles each src/<stem>.zig with the testfixture
+# config (SQLITE_DEBUG/SQLITE_TEST) so struct layouts / test instrumentation
+# match the testfixture C. Each is swapped in for upstream src/<stem>.c in the
+# testfixture link command.
 MODULES=(random hash bitvec rowset fault mem1 complete memjournal fts3_hash)
 if [ "$ZIG" = 1 ]; then
-  for m in "${MODULES[@]}"; do
-    zig build-obj -fPIC -fno-stack-check -OReleaseSafe "$PROJ/src/$m.zig" -femit-bin="${m}_zig.o"
-  done
-  # reconstruct the testfixture link command, swapping each src/<m>.c -> <m>_zig.o
-  python3 - "$UPSTREAM" "${MODULES[@]}" <<'PY'
+  ( cd "$PROJ" && zig build test-objs -Dtestfixture=true ) >zigobjs.log 2>&1 \
+    || { echo "FATAL: zig build test-objs failed"; cat zigobjs.log; exit 1; }
+  OBJDIR="$PROJ/zig-out/test-objs"
+  # reconstruct the testfixture link command, swapping each src/<m>.c -> <m>.o
+  python3 - "$UPSTREAM" "$OBJDIR" "${MODULES[@]}" <<'PY'
 import re, sys
 up = sys.argv[1]
-mods = sys.argv[2:]
+objdir = sys.argv[2]
+mods = sys.argv[3:]
 lines = open('make_tf.log').read().split('\n')
 cmds, cur = [], []
 for ln in lines:
@@ -65,7 +69,7 @@ if cur: cmds.append(' '.join(cur))
 cmd = [c for c in cmds if '-o testfixture ' in c and 'cc ' in c][-1]
 cmd = re.sub(r'^.*?exit \$\?;\s*', '', cmd)
 for m in mods:
-    cmd = cmd.replace(up + '/src/%s.c' % m, '%s_zig.o' % m)
+    cmd = cmd.replace(up + '/src/%s.c' % m, '%s/%s.o' % (objdir, m))
 cmd = cmd.replace('-o testfixture ', '-o testfixture_zig ')
 open('relink_zig.sh','w').write('#!/bin/bash\nset -e\nset -a; . ./.tclenv.sh; set +a\n'+cmd+'\n')
 PY
