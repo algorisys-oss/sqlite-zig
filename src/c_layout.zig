@@ -428,6 +428,24 @@ const prod = struct {
     pub const PgHdr_nRef: usize = 56;
     pub const PgHdr_pDirtyNext: usize = 64;
     pub const PgHdr_pDirtyPrev: usize = 72;
+    pub const Table_zColAff: usize = 24;
+    pub const Table_nNVCol: usize = 56;
+    pub const Table_keyConf: usize = 62;
+    pub const Table_pCheck: usize = 32;
+    pub const Subquery_addrFillSub: usize = 8;
+    pub const Subquery_regReturn: usize = 12;
+    pub const Subquery_regResult: usize = 16;
+    pub const AutoincInfo_pNext: usize = 0;
+    pub const AutoincInfo_pTab: usize = 8;
+    pub const AutoincInfo_iDb: usize = 16;
+    pub const AutoincInfo_regCtr: usize = 20;
+    pub const sizeof_AutoincInfo: usize = 24;
+    pub const Index_zColAff: usize = 32;
+    pub const Index_aSortOrder: usize = 56;
+    pub const Index_aColExpr: usize = 80;
+    pub const Parse_pAinc: usize = 264;
+    pub const Schema_pSeqTab: usize = 104;
+    pub const Select_op: usize = 0;
 };
 
 /// --dev testfixture config (SQLITE_DEBUG + SQLITE_TEST).
@@ -851,6 +869,24 @@ const tf = struct {
     pub const PgHdr_nRef: usize = 56;
     pub const PgHdr_pDirtyNext: usize = 64;
     pub const PgHdr_pDirtyPrev: usize = 72;
+    pub const Table_zColAff: usize = 24;
+    pub const Table_nNVCol: usize = 56;
+    pub const Table_keyConf: usize = 62;
+    pub const Table_pCheck: usize = 32;
+    pub const Subquery_addrFillSub: usize = 8;
+    pub const Subquery_regReturn: usize = 12;
+    pub const Subquery_regResult: usize = 16;
+    pub const AutoincInfo_pNext: usize = 0;
+    pub const AutoincInfo_pTab: usize = 8;
+    pub const AutoincInfo_iDb: usize = 16;
+    pub const AutoincInfo_regCtr: usize = 20;
+    pub const sizeof_AutoincInfo: usize = 24;
+    pub const Index_zColAff: usize = 32;
+    pub const Index_aSortOrder: usize = 56;
+    pub const Index_aColExpr: usize = 80;
+    pub const Parse_pAinc: usize = 264;
+    pub const Schema_pSeqTab: usize = 104;
+    pub const Select_op: usize = 0;
 };
 
 /// The layout namespace matching the current build.

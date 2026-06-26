@@ -484,5 +484,26 @@ int main(void) {
     P(PgHdr, pDirtyPrev);
     /* NOTE: struct PCache is opaque (defined only in pcache.c, not a header), so
     ** its layout is owned by src/pcache.zig and not extracted here. */
+
+    /* insert.c — INSERT codegen. (Index idxType/uniqNotNull/bHasExpr,
+    ** SrcItem.fg.* and Column.notNull are :bitfields → byte-gated in-module.) */
+    P(Table, zColAff);
+    P(Table, nNVCol);
+    P(Table, keyConf);
+    P(Table, pCheck);
+    P(Subquery, addrFillSub);
+    P(Subquery, regReturn);
+    P(Subquery, regResult);
+    P(AutoincInfo, pNext);
+    P(AutoincInfo, pTab);
+    P(AutoincInfo, iDb);
+    P(AutoincInfo, regCtr);
+    SZ(AutoincInfo, AutoincInfo);
+    P(Index, zColAff);
+    P(Index, aSortOrder);
+    P(Index, aColExpr);
+    P(Parse, pAinc);
+    P(Schema, pSeqTab);
+    P(Select, op);
     return 0;
 }

@@ -103,6 +103,7 @@ const ported_modules = [_][]const u8{
     "walker.c", // -> src/walker.zig (Expr/Select AST walker)
     "update.c", // -> src/update.zig (UPDATE statement codegen)
     "delete.c", // -> src/delete.zig (DELETE statement codegen)
+    "insert.c", // -> src/insert.zig (INSERT statement codegen)
     "resolve.c", // -> src/resolve.zig (name resolution)
     "vdbe.c", // -> src/vdbe.zig (bytecode interpreter: sqlite3VdbeExec dispatch loop)
     "func.c", // -> src/func.zig (built-in SQL scalar/aggregate functions)

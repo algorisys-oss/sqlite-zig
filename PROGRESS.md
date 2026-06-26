@@ -437,6 +437,42 @@ cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
   committing. btree.zig (66 exports) was never integrated/debugged. See
   [[vdbeaux-btree-deferred-wip]].
 
+- 2026-06-26: Ported `insert.c` (INSERT-statement codegen) — `src/insert.zig`.
+  14 exports incl. sqlite3Insert, sqlite3GenerateConstraintChecks (the big
+  NOT-NULL/CHECK/UNIQUE/PK + REPLACE-recheck constraint engine),
+  sqlite3CompleteInsertion, sqlite3OpenTableAndIndices, sqlite3OpenTable,
+  sqlite3{Index,Table}AffinityStr, sqlite3TableAffinity,
+  sqlite3ComputeGeneratedColumns, sqlite3Autoincrement{Begin,End},
+  sqlite3MultiValues{,End}, sqlite3ExprReferencesUpdatedColumn, plus the
+  SQLITE_TEST-only `sqlite3_xferopt_count` (comptime @export). Static helpers
+  (xferOptimization + the xferCompatible* checks, autoIncBegin/Step/End,
+  readsTable, computeIndexAffStr, IndexIterator, codeWithoutRowidPreupdate)
+  are private Zig fns. New c_layout offsets (all config-invariant): Table
+  zColAff/nNVCol/keyConf/pCheck, Subquery addrFillSub/regReturn/regResult,
+  AutoincInfo {pNext,pTab,iDb,regCtr}+sizeof, Index zColAff/aSortOrder/aColExpr,
+  Parse.pAinc, Schema.pSeqTab, Select.op. Bugs found & fixed: (1) IdList.a is an
+  INLINE flex array (`int nId; struct{char*zName;} a[]`) — take its address, not
+  deref-as-pointer (the classic gotcha; produced empty column names →
+  "table t has no column named " + segfault). (2) ~40 opcode/token/flag/offset
+  constants re-probed against ground truth (OP_Eq/Ne and OP_Affinity/TypeCheck
+  were *swapped* vs my first guess; OP_Goto=9, TK_INSERT=128, SRT_Coroutine=11,
+  COLFLAG_NOTAVAIL=0x80, Upsert isDoUpdate@40/pUpsertIdx@56, etc.).
+  (3) VdbeVerifyAbortable/VdbeReleaseRegisters are SQLITE_DEBUG-only macros —
+  `@extern` them only inside `if (config.sqlite_debug)` so production never
+  references the symbol. (4) VdbeModuleComment ("BEGIN/END: GenCnstCks") is a
+  no-op unless SQLITE_ENABLE_MODULE_COMMENTS (off both configs) — must NOT emit
+  those Noops, but VdbeComment/VdbeNoopComment ARE on (EXPLAIN_COMMENTS) and must
+  be reproduced for address-identical bytecode. Validated: `zig build`/`zig build
+  test` green; EXPLAIN of upsert + OR REPLACE insert byte-identical vs pure-C;
+  differential smoke (multi-row, INSERT…SELECT, OR REPLACE/IGNORE, ON CONFLICT DO
+  UPDATE, AUTOINCREMENT, trigger insert) byte-identical Zig vs amalgamation. TCL
+  --zig 0 errors: insert(84) insert2(32) insert3(19) insert4(96) insert5(13)
+  conflict(148) upsert1(36) autoinc(88) trigger1(89). NOTE: fkey2-2.48 crashes in
+  `sqlite3PagerSavepoint` (pager.zig:3156, `aSavepoint.?` null-deref on a
+  SAVEPOINT) — confirmed PRE-EXISTING by reverting insert.c to C and reproducing
+  the identical panic; unrelated to insert codegen (it's the documented debug-only
+  savepoint path in pager.zig). Differential C-baseline fkey2 = 0/1217.
+
 ### Resume guide — continuing the agent-parallelized migration
 The authoritative ordered list of ported modules (with one-line descriptions) is
 `ported_modules` in [build.zig](build.zig). To port the next module(s):
