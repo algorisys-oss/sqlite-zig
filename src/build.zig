@@ -2534,7 +2534,7 @@ fn viewGetColumnNames(pParse: Cptr, pTable: Cptr) c_int {
         wr(i16, pTable, Table_nCol, -1);
         // DisableLookaside
         wr(u32, db, sqlite3_lookaside_bDisable, rd(u32, db, sqlite3_lookaside_bDisable) + 1);
-        wr(u32, db, sqlite3_lookaside_sz, 0);
+        wr(u16, db, sqlite3_lookaside_sz, 0); // sz is u16 — a u32 write spills into szTrue@438
         // Save xAuth, set 0
         const xAuth = rdp(db, sqlite3_xAuth);
         wr(?*anyopaque, db, sqlite3_xAuth, null);
@@ -2562,7 +2562,7 @@ fn viewGetColumnNames(pParse: Cptr, pTable: Cptr) c_int {
         sqlite3SelectDelete(db, pSel);
         // EnableLookaside
         wr(u32, db, sqlite3_lookaside_bDisable, rd(u32, db, sqlite3_lookaside_bDisable) - 1);
-        wr(u32, db, sqlite3_lookaside_sz, lookasideSzRestore(db));
+        wr(u16, db, sqlite3_lookaside_sz, lookasideSzRestore(db));
         wr(u8, pParse, Parse_eParseMode, eParseMode);
     } else {
         nErr += 1;
@@ -2574,10 +2574,12 @@ fn viewGetColumnNames(pParse: Cptr, pTable: Cptr) c_int {
     return nErr + rd(c_int, pParse, Parse_nErr);
 }
 const COLFLAG_NOINSERT_u32: u32 = 0x0062;
-const sqlite3_lookaside_szTrue = off("sqlite3_lookaside_szTrue", 440);
-inline fn lookasideSzRestore(db: Cptr) u32 {
-    // EnableLookaside sets sz = bDisable ? 0 : szTrue
-    return if (rd(u32, db, sqlite3_lookaside_bDisable) != 0) 0 else rd(u32, db, sqlite3_lookaside_szTrue);
+const sqlite3_lookaside_szTrue = off("sqlite3_lookaside_szTrue", 438);
+inline fn lookasideSzRestore(db: Cptr) u16 {
+    // EnableLookaside sets sz = bDisable ? 0 : szTrue. sz/szTrue are u16; using
+    // u32 here clobbered szTrue (→0), so sqlite3DbMallocSize returned garbage
+    // and growOpArray's realloc dropped emitted opcodes — corrupting any view query.
+    return if (rd(u32, db, sqlite3_lookaside_bDisable) != 0) 0 else rd(u16, db, sqlite3_lookaside_szTrue);
 }
 
 export fn sqlite3ViewGetColumnNames(pParse: Cptr, pTable: Cptr) c_int {
