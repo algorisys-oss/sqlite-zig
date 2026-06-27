@@ -6,7 +6,7 @@
 //! of the FTS5 family calls:
 //!
 //!   sqlite3Fts5GetVarint32  - read a 32-bit varint (unrolled 1/2/3-byte cases)
-//!   sqlite3Fts5GetVarint    - read a 64-bit varint, returns u8 byte count
+//!   sqlite3Fts5GetVarint    - read a 64-bit varint, returns byte count (c_int)
 //!   sqlite3Fts5PutVarint    - write a 64-bit varint, returns int byte count
 //!   sqlite3Fts5GetVarintLen - bytes needed for a 32-bit value (assumes >=128)
 //!
@@ -18,7 +18,15 @@ const SLOT_2_0: u32 = 0x001fc07f; // (0x7f<<14) | 0x7f
 const SLOT_4_2_0: u32 = 0xf01fc07f; // (0xf<<28) | SLOT_2_0
 
 /// fts5.c 26983-27140: read a 64-bit varint from p[0]. Returns bytes read.
-export fn sqlite3Fts5GetVarint(p0: [*]const u8, v: *u64) callconv(.c) u8 {
+///
+/// NOTE: the C prototype declares the return type as `u8`, but every Zig
+/// declaration/caller in this project (e.g. the `extern` in fts5_index.zig)
+/// treats it as `c_int`. Returning `u8` under callconv(.c) only writes the
+/// low byte of the return register, leaving its upper bytes undefined; a caller
+/// reading the full `c_int` then picks up garbage (observed: a 2-byte varint
+/// reported as length 258). Return `c_int` so the whole register is defined and
+/// matches the declared prototype.
+export fn sqlite3Fts5GetVarint(p0: [*]const u8, v: *u64) callconv(.c) c_int {
     var p = p0;
     var a: u32 = undefined;
     var b: u32 = undefined;
