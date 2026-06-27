@@ -84,18 +84,15 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
 
 ### Known issues
 
-- **STRICT tables don't reject type-mismatched values** (correctness;
-  pre-existing, unrelated to ALTER — surfaced by `alter-20.3`). E.g.
-  `CREATE TABLE t(a INT, b TEXT) STRICT; INSERT INTO t VALUES(1, x'313233')`
-  wrongly succeeds (stores a BLOB in a TEXT STRICT column) instead of erroring
-  "cannot store BLOB value in TEXT column". Reproduces with no ALTER involved
-  and with C `alter.c` linked, so it's in the STRICT-enforcement INSERT/UPDATE
-  type-check codegen (insert.zig / the OP_HaltIfNull / column-affinity check
-  path), not alter. Only `alter` (1/123) fails because of it; all other
-  alter*/altercol/altertab/alterdropcol/altercons suites are 0 errors under
-  `--zig`.
+None currently open.
 
-**Fixed (view/op-array corruption + EXPLAIN-reprepare regression):**
+**Fixed (STRICT enforcement + view/op-array corruption + EXPLAIN-reprepare):**
+
+- **STRICT tables silently accepted type-mismatched values** (`vdbe.zig`
+  COLTYPE_* off-by-one). eCType is CUSTOM=0/ANY=1/…/TEXT=6, but opTypeCheck used
+  ANY=0…TEXT=5, so a TEXT column matched no switch arm (no check) and others got
+  a neighbour's check. Fixed → strict1 0/51, alter 0/123. insert.zig/build.zig
+  already had the right values.
 
 - **Op-array corruption on any view query** (`695a494`). `build.zig`'s
   view-column-name resolver read/wrote `Lookaside.sz`/`szTrue` as u32 instead of
