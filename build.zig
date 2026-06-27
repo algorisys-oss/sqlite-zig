@@ -63,6 +63,7 @@ const ported_modules = [_][]const u8{
     "ctime.c", // -> src/ctime.zig (compile-option list: sqlite3CompileOptions)
     "memjournal.c", // -> src/memjournal.zig (in-memory rollback journal)
     "fts3_hash.c", // -> src/fts3_hash.zig (FTS3 standalone hash table)
+    "fts3.c", // -> src/fts3.zig (FTS3/FTS4 full-text-search virtual table)
     "utf.c", // -> src/utf.zig (UTF-8/16 translation; first Mem-coupled port)
     "os.c", // -> src/os.zig (VFS/file dispatch + VFS registry)
     "os_unix.c", // -> src/os_unix.zig (the Unix VFS: file I/O, locking, WAL shm, mmap)

@@ -2744,6 +2744,7 @@ inline fn setSchemaEnc(db: Ptr, v: u8) void {
 }
 
 const ExtInit = *const fn (Ptr) callconv(.c) c_int;
+extern fn sqlite3Fts3Init(db: Ptr) c_int; // SQLITE_ENABLE_FTS3 (via FTS4) — was dropped
 extern fn sqlite3Fts5Init(db: Ptr) c_int;
 extern fn sqlite3RtreeInit(db: Ptr) c_int;
 extern fn sqlite3DbpageRegister(db: Ptr) c_int;
@@ -2754,7 +2755,9 @@ fn sqlite3TestExtInit(db: Ptr) callconv(.c) c_int {
     _ = db;
     return sqlite3FaultSim(500);
 }
+// Order matches C sqlite3BuiltinExtensions[] for this build's flags.
 const sqlite3BuiltinExtensions = [_]ExtInit{
+    sqlite3Fts3Init,
     sqlite3Fts5Init,
     sqlite3RtreeInit,
     sqlite3DbpageRegister,
