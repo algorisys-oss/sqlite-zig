@@ -675,6 +675,9 @@ int main(void) {
     printf("Sqlite3Config_m_xShutdown %zu\n", offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xShutdown));
     printf("Sqlite3Config_m_pAppData %zu\n",  offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, pAppData));
 
+    /* global.c */
+    P(Sqlite3Config, mxStrlen);
+
     /* main.c — connection control surface */
     P(sqlite3, lastRowid);
     P(sqlite3, pSavepoint);

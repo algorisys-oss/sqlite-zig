@@ -52,6 +52,7 @@ const non_tu = [_][]const u8{ "geopoly.c", "shell.c", "tclsqlite-ex.c" };
 /// (e.g. "random.c") here AND add the corresponding src/<name>.zig below.
 /// The C file is then excluded and the Zig object linked in its place.
 const ported_modules = [_][]const u8{
+    "global.c", // -> src/global.zig (sqlite3Config instance + ctype/opcode tables + globals)
     "random.c", // -> src/random.zig (first port; PRNG)
     "hash.c", // -> src/hash.zig (generic hash table)
     "bitvec.c", // -> src/bitvec.zig (fixed-length bitmap)
