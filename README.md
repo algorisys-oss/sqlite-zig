@@ -15,7 +15,8 @@ rewrite.
 > the regression battery. The only `.c` files still compiled are non-portable for
 > a Linux engine: the Lemon-generated `parse.c`/`opcodes.c` (we port from the
 > generators, not the generated files), the Windows VFS, and flag-inactive
-> alternates. See [PROGRESS.md](PROGRESS.md) and [plan.md](plan.md).
+> alternates — see [docs/not-migrated.md](docs/not-migrated.md) for the full list
+> and rationale. See also [PROGRESS.md](PROGRESS.md) and [plan.md](plan.md).
 
 ## How it works
 
@@ -253,7 +254,7 @@ recurring C→Zig bug patterns the suites catch).
 | `test/` | Functional regression battery + golden output. |
 | [plan.md](plan.md) | Phased migration roadmap. |
 | [PROGRESS.md](PROGRESS.md) | Current status, resume point, and how to port a module. |
-| [docs/](docs/) | Design & process notes — [architecture.md](docs/architecture.md), [testing.md](docs/testing.md). |
+| [docs/](docs/) | Design & process notes — [architecture.md](docs/architecture.md), [testing.md](docs/testing.md), [not-migrated.md](docs/not-migrated.md). |
 | [CLAUDE.md](CLAUDE.md) | Agent/contributor conventions. |
 
 ## License

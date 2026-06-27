@@ -33,6 +33,11 @@ This was the LAST active port. 90/105: everything active is Zig. The other 15 fi
 are non-portable (generated parse.c/opcodes.c, Windows os_win/mutex_w32, flag-inactive
 mem0/2/3/notify/os_kv/icu/fts3_icu/rbu, TCL harness).
 
+**What's not migrated, and why:** see [docs/not-migrated.md](docs/not-migrated.md)
+— the 12 remaining C TUs categorized (2 generated tables actively used:
+parse.c/opcodes.c; 2 Windows-only; 8 flag-inactive alternates/extensions). Only
+the 2 generated tables run in a default Linux build.
+
 ### Post-FTS5: 4 more engine bugs fixed (surfaced by the blog CRUD example)
 
 Building examples/blog_crud.zig (interactive CRUD over sampledata/blog.db; `zig
