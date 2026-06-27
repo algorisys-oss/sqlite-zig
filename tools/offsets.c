@@ -722,6 +722,39 @@ int main(void) {
     P(sqlite3_vtab, pModule);
     P(sqlite3_module, xFindFunction);
 
+    /* wherecode.c — WhereLevel/WhereLoop/WhereInfo extras (config-divergent ones
+    ** get correct prod/tf via the dual gen_layout compile). */
+    SZ(WhereLevel, WhereLevel);
+    P(WhereInfo, wctrlFlags);
+    P(WhereInfo, nLevel);
+    P(WhereInfo, eOnePass);
+    P(WhereInfo, pSelect);
+    P(WhereInfo, revMask);
+    P(WhereInfo, sWC);
+    P(WhereInfo, a);
+    /* bDeferredSeek/untestedTerms bitfield byte — anchor to eDistinct+1 */
+    printf("WhereInfo_bits %zu\n", offsetof(struct WhereInfo, eDistinct) + 1);
+    P(WhereLoop, nOut);
+    P(WhereLoop, wsFlags);
+    P(WhereLoop, nLTerm);
+    P(WhereLoop, nSkip);
+    P(WhereLoop, aLTerm);
+    printf("WhereLoop_u_btree_nEq %zu\n", offsetof(struct WhereLoop, u.btree.nEq));
+    printf("WhereLoop_u_btree_nBtm %zu\n", offsetof(struct WhereLoop, u.btree.nBtm));
+    printf("WhereLoop_u_btree_nTop %zu\n", offsetof(struct WhereLoop, u.btree.nTop));
+    printf("WhereLoop_u_btree_pIndex %zu\n", offsetof(struct WhereLoop, u.btree.pIndex));
+    printf("WhereLoop_u_vtab_idxNum %zu\n", offsetof(struct WhereLoop, u.vtab.idxNum));
+    printf("WhereLoop_u_vtab_omitMask %zu\n", offsetof(struct WhereLoop, u.vtab.omitMask));
+    printf("WhereLoop_u_vtab_idxStr %zu\n", offsetof(struct WhereLoop, u.vtab.idxStr));
+    printf("WhereLoop_u_vtab_mHandleIn %zu\n", offsetof(struct WhereLoop, u.vtab.mHandleIn));
+    /* needFree/bOmitOffset/bIdxNumHex bitfield word — right after u.vtab.idxNum (int) */
+    printf("WhereLoop_u_vtab_bits %zu\n", offsetof(struct WhereLoop, u.vtab.idxNum) + 4);
+    printf("WhereTerm_u_pOrInfo %zu\n", offsetof(struct WhereTerm, u.pOrInfo));
+    /* bitfield bytes anchored to adjacent real fields (config-stable structs) */
+    printf("Column_notNull %zu\n", offsetof(struct Column, affinity) - 1);
+    printf("Index_idxType %zu\n", offsetof(struct Index, onError) + 1);
+    printf("StrAccum_printfFlags %zu\n", offsetof(struct sqlite3_str, printfFlags));
+
     /* expr.c — AggInfo + nested col/func sub-structs */
     P(AggInfo, directMode);
     P(AggInfo, useSortingIdx);
