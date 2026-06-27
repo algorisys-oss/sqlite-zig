@@ -108,6 +108,7 @@ const ported_modules = [_][]const u8{
     "analyze.c", // -> src/analyze.zig (ANALYZE / index statistics)
     "upsert.c", // -> src/upsert.zig (UPSERT / ON CONFLICT processing)
     "tokenize.c", // -> src/tokenize.zig (SQL tokenizer + keyword hash + parser driver)
+    "alter.c", // -> src/alter.zig (ALTER TABLE: rename/add/drop column, rename table)
     "resolve.c", // -> src/resolve.zig (name resolution)
     "vdbe.c", // -> src/vdbe.zig (bytecode interpreter: sqlite3VdbeExec dispatch loop)
     "func.c", // -> src/func.zig (built-in SQL scalar/aggregate functions)

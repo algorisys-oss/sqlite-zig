@@ -223,6 +223,9 @@ int main(void) {
     P(Upsert, pUpsertSet);
     P(Upsert, pUpsertWhere);
     P(Upsert, pNextUpsert);
+    P(Upsert, pUpsertSrc);
+    /* alter.c — ALTER TABLE / rename-token bookkeeping */
+    P(Parse, pRename);
     /* backup.c — reaches into Btree/BtShared (btreeInt.h) leading fields. */
     P(Btree, db);
     P(Btree, pBt);
