@@ -80,9 +80,15 @@ fi
 # 4. Run the requested tests; report the per-file error summary.
 echo "fixture: $FIXTURE"
 fail=0
+# Test files live in test/ plus the per-extension test dirs (FTS5 is the big one).
+TESTDIRS=("$UPSTREAM/test" "$UPSTREAM/ext/fts5/test" "$UPSTREAM/ext/rtree" \
+          "$UPSTREAM/ext/session" "$UPSTREAM/ext/rbu" "$UPSTREAM/ext/fts3")
 for t in "${TESTS[@]}"; do
-  tf="$UPSTREAM/test/$t.test"
-  [ -f "$tf" ] || { echo "$t: (no such test)"; continue; }
+  tf=""
+  for d in "${TESTDIRS[@]}"; do
+    if [ -f "$d/$t.test" ]; then tf="$d/$t.test"; break; fi
+  done
+  [ -n "$tf" ] || { echo "$t: (no such test)"; continue; }
   out="$($FIXTURE "$tf" 2>&1 || true)"
   line="$(echo "$out" | grep -iE 'errors out of' | tail -1)"
   echo "$t: ${line:-<no summary — see output>}"

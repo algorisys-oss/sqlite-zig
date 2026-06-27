@@ -3415,8 +3415,14 @@ fn errName(rc_in: c_int) callconv(.c) ?[*:0]const u8 {
     }
     return zName;
 }
+// SQLITE_HAVE_OS_TRACE global. C (main.c) defines `int sqlite3OSTrace = 0;`
+// under SQLITE_HAVE_OS_TRACE, which on Linux is enabled by SQLITE_TEST; the TCL
+// test harness (test1.c) reads/writes it. Mirror it in the testfixture build.
+var os_trace: c_int = 0;
+
 comptime {
     if (config.sqlite_test) {
         @export(&errName, .{ .name = "sqlite3ErrName" });
+        @export(&os_trace, .{ .name = "sqlite3OSTrace" });
     }
 }
