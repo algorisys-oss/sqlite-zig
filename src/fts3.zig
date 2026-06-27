@@ -2587,8 +2587,12 @@ fn fts3TermSegReaderCursor(pCsr: *Fts3Cursor, zTerm: ?[*]const u8, nTerm: c_int,
 }
 
 fn fts3SegReaderCursorFree(pSegcsr: ?*Fts3MultiSegReader) void {
-    sqlite3Fts3SegReaderFinish(pSegcsr.?);
-    sqlite3_free(pSegcsr);
+    // C passes a possibly-null pSegcsr; sqlite3Fts3SegReaderFinish null-checks
+    // internally and free(NULL) is a no-op — so guard rather than force-unwrap.
+    if (pSegcsr) |p| {
+        sqlite3Fts3SegReaderFinish(p);
+        sqlite3_free(p);
+    }
 }
 
 fn fts3TermSelect(p: *Fts3Table, pTok: *Fts3PhraseToken, iColumn: c_int, pnOut: *c_int, ppOut: *?[*]u8) c_int {
