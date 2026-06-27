@@ -2274,7 +2274,7 @@ fn fts5LeafSeek(
 
                 if (iPgidx >= n) {
                     bEndOfPage = 1;
-                    break;
+                    break :failed;
                 }
 
                 iPgidx += @intCast(fts5GetVarint32Into(u32, a + iPgidx, &nKeep));
@@ -2293,38 +2293,38 @@ fn fts5LeafSeek(
                     iOff = @bitCast(iOffI);
                 }
             }
+        } // :failed -- both `break :failed` and the bEndOfPage break land here
 
-            // search_failed:
-            if (bGe == 0) {
-                fts5DataRelease(pIter.pLeaf);
-                pIter.pLeaf = null;
-                return;
-            } else if (bEndOfPage != 0) {
-                while (true) {
-                    fts5SegIterNextPage(p, pIter);
-                    if (pIter.pLeaf == null) return;
-                    a = pIter.pLeaf.?.p.?;
-                    if (!fts5LeafIsTermless(pIter.pLeaf.?)) {
-                        iPgidx = @intCast(pIter.pLeaf.?.szLeaf);
-                        iPgidx += @intCast(fts5GetVarint32Into(u32, pIter.pLeaf.?.p.? + iPgidx, &iOff));
-                        if (iOff < 4 or @as(i64, iOff) >= pIter.pLeaf.?.szLeaf) {
-                            _ = fts5IndexCorruptIter(p, pIter);
-                            return;
-                        } else {
-                            nKeep = 0;
-                            iTermOff = iOff;
-                            n = @intCast(pIter.pLeaf.?.nn);
-                            iOff += @intCast(fts5GetVarint32Into(u32, a + iOff, &nNew));
-                            break;
-                        }
+        // search_failed: (must run AFTER the failed block so `break :failed`
+        // reaches it -- in C this is the `search_failed:` label that goto jumps
+        // to, then FALLS THROUGH into search_success. `break :success` skips it.)
+        if (bGe == 0) {
+            fts5DataRelease(pIter.pLeaf);
+            pIter.pLeaf = null;
+            return;
+        } else if (bEndOfPage != 0) {
+            while (true) {
+                fts5SegIterNextPage(p, pIter);
+                if (pIter.pLeaf == null) return;
+                a = pIter.pLeaf.?.p.?;
+                if (!fts5LeafIsTermless(pIter.pLeaf.?)) {
+                    iPgidx = @intCast(pIter.pLeaf.?.szLeaf);
+                    iPgidx += @intCast(fts5GetVarint32Into(u32, pIter.pLeaf.?.p.? + iPgidx, &iOff));
+                    if (iOff < 4 or @as(i64, iOff) >= pIter.pLeaf.?.szLeaf) {
+                        _ = fts5IndexCorruptIter(p, pIter);
+                        return;
+                    } else {
+                        nKeep = 0;
+                        iTermOff = iOff;
+                        n = @intCast(pIter.pLeaf.?.nn);
+                        iOff += @intCast(fts5GetVarint32Into(u32, a + iOff, &nNew));
+                        break;
                     }
                 }
             }
-            // fall through to search_success
-        } // :failed
-
-        // (control reaching here = fell out of failed block -> search_success)
-    } // :success
+        }
+        // fall through to search_success
+    } // :success -- `break :success` lands here, skipping search_failed
 
     // search_success:
     if (@as(i64, iOff) + nNew > n or nNew < 1) {
