@@ -57,13 +57,13 @@
             sub-agent waves; orchestrator owns shared files + validation + commits.
             Turn 10 is in progress; re-run the script next session for its tail.
 
-[2026-06-27] 12:12:54-17:4x (in progress)  13 turns  ->  TOTAL=476289114  (cum=832706688)
+[2026-06-27] 12:12:54-17:4x (in progress)  13 turns  ->  TOTAL=541772201  (cum=898189775)
     elapsed: ~5h+ wall clock so far (final turn in progress).
     prompt: Reconnect after a drop ("got disconnected"); continue the autonomous
             migration without stopping until the goal is reached.
-    note:   Ported 20 modules this session (63 -> 83): pragma, status, btmutex,
+    note:   Ported 23 modules this session (63 -> 86): pragma, status, btmutex,
             dbpage, dbstat, memdb, malloc, expr, whereexpr, wherecode, where,
-            select, mutex_unix, main, ctime, global, treeview, os_unix, rtree, sqlite3session. THE ENTIRE
+            select, mutex_unix, main, ctime, global, treeview, os_unix, rtree, sqlite3session, fts3, fts3_write, fts3_expr. THE ENTIRE
             ACTIVE LINUX CORE ENGINE IS NOW ZIG: global config + ctype tables ->
             os_unix VFS (all file I/O) -> pager/wal -> btree -> vdbe -> tokenize/
             resolve -> expr/where*/select codegen -> func/json/window -> main API.
@@ -83,4 +83,4 @@
             os_kv), generated (parse.c/opcodes.c). Re-run script next session for
             this turn's tail.
 
-# Session actual total so far (cumulative): 832,706,688 tokens.
+# Session actual total so far (cumulative): 898,189,775 tokens.
