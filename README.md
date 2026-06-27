@@ -6,11 +6,16 @@ database engine that stays behaviorally compatible with upstream SQLite and
 passes its test suite — reached **one module at a time**, never as a big-bang
 rewrite.
 
-> **Status:** Phase 0 done; Phase 1 underway. A Zig build compiles upstream
-> SQLite **v3.54.0** into `libsqlite3.a` + the `sqlite3` CLI, gated by a green
-> test step. The first module (`random.c`, the PRNG) is **ported to Zig** and
-> linked in place of the C version. See [PROGRESS.md](PROGRESS.md) and
-> [plan.md](plan.md).
+> **Status:** Phase 1 — **90 modules ported to Zig**, including the whole active
+> Linux engine: pager, B-tree, VDBE, the SQL compiler (tokenizer → parser glue →
+> code generator → optimizer), the OS/VFS layer, and every active extension
+> (R-Tree/Geopoly, Session, FTS3/4, **FTS5**, JSON). The Zig build compiles
+> upstream SQLite **v3.54.0** into `libsqlite3.a` + the `sqlite3`/`sqlite-zig`
+> CLI, gated by a green test step. Output is byte-identical to upstream C across
+> the regression battery. The only `.c` files still compiled are non-portable for
+> a Linux engine: the Lemon-generated `parse.c`/`opcodes.c` (we port from the
+> generators, not the generated files), the Windows VFS, and flag-inactive
+> alternates. See [PROGRESS.md](PROGRESS.md) and [plan.md](plan.md).
 
 ## How it works
 
@@ -49,7 +54,64 @@ Build modes:
 | `zig build -Damalgamation=true` | Single-file amalgamation build — a fast sanity check; cannot be swapped file-by-file. |
 | `zig build -Doptimize=ReleaseFast` | Optimized build (default is Debug). |
 
-Artifacts land in `zig-out/bin/sqlite3` and `zig-out/lib/libsqlite3.a`.
+Artifacts land in `zig-out/bin/sqlite3`, `zig-out/bin/sqlite-zig`, and
+`zig-out/lib/libsqlite3.a`.
+
+## Using the `sqlite-zig` executable
+
+`zig build` installs the command-line shell under **two** names:
+`zig-out/bin/sqlite3` and `zig-out/bin/sqlite-zig`. They are the same binary —
+the standard SQLite shell linked against this project's ported-Zig
+`libsqlite3.a` — so every query runs through the Zig engine. The `sqlite-zig`
+name makes it obvious which build you are invoking next to a stock `sqlite3`.
+
+```bash
+# one-off query against an in-memory database
+zig-out/bin/sqlite-zig :memory: "select sqlite_version();"        # -> 3.54.0
+
+# open (or create) a database file and run statements
+zig-out/bin/sqlite-zig blog.db "create table t(a,b); insert into t values(1,'x');"
+zig-out/bin/sqlite-zig blog.db "select * from t;"
+
+# interactive shell — dot-commands work as in upstream
+zig-out/bin/sqlite-zig blog.db
+sqlite> .tables
+sqlite> .schema t
+sqlite> .mode box
+sqlite> select * from t;
+sqlite> .quit
+
+# read a SQL script
+zig-out/bin/sqlite-zig blog.db ".read schema.sql"
+
+# pipe SQL in on stdin
+echo "select count(*) from t;" | zig-out/bin/sqlite-zig blog.db
+
+# `zig build run` launches the same shell interactively
+zig build run
+```
+
+Files it writes are bit-for-bit standard SQLite databases — a stock `sqlite3`
+can read a database created by `sqlite-zig` and vice-versa:
+
+```bash
+zig-out/bin/sqlite-zig t.db "create table x(a); insert into x values(1),(2);"
+sqlite3 t.db "select count(*) from x;"   # stock sqlite3 reads our file -> 2
+```
+
+## Examples
+
+[`examples/`](examples/) holds standalone Zig programs that drive the ported
+engine through the C API. The headline one is an interactive blog **CRUD**
+terminal (FTS5 search, triggers, foreign-key cascades):
+
+```bash
+zig build sample     # build sampledata/blog.db (schema + seed) from Zig
+zig build example    # interactive CRUD REPL over sampledata/blog.db
+```
+
+See [examples/README.md](examples/README.md) for the command list and a sample
+session.
 
 ## How to verify / test
 
@@ -126,7 +188,9 @@ beyond the sample set (`veryquick` / `testrunner.tcl`) is the next step — see
 | `vendor/tsrc/` | Upstream C translation units (the per-file set ports replace one at a time). |
 | `vendor/tu.txt` | The library's translation-unit manifest. |
 | `vendor/amalg/` | The single-file amalgamation (sanity-build mode). |
-| `src/` | Zig ports of SQLite modules (`random.zig`, `chacha.zig` so far). |
+| `src/` | Zig ports of SQLite modules (90 ported — pager, btree, vdbe, SQL compiler, VFS, FTS5, …). |
+| `examples/` | Standalone Zig programs using the engine via the C API (e.g. the blog CRUD REPL). |
+| `sampledata/` | The sample blog schema/seed + `zig build sample` builder. |
 | `test/` | Functional regression battery + golden output. |
 | [plan.md](plan.md) | Phased migration roadmap. |
 | [PROGRESS.md](PROGRESS.md) | Current status, resume point, and how to port a module. |

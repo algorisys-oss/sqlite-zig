@@ -313,6 +313,31 @@ pub fn build(b: *std.Build) void {
     const sample_run = b.addRunArtifact(sample_exe);
     sample_run.setCwd(b.path(".")); // write sampledata/blog.db at the project root
     b.step("sample", "Build + verify the sample blog DB via a Zig program").dependOn(&sample_run.step);
+
+    // `zig build example` — an interactive terminal CRUD app over blog.db,
+    // linked against this libsqlite3.a (so it drives the ported Zig engine,
+    // FTS5 included). `zig build example -- <db>` opens a different file.
+    const example_mod = b.createModule(.{
+        .root_source_file = b.path("examples/blog_crud.zig"),
+        .target = target,
+        .optimize = optimize,
+        .link_libc = true,
+    });
+    example_mod.linkLibrary(lib);
+    example_mod.linkSystemLibrary("z", .{});
+    example_mod.linkSystemLibrary("m", .{});
+    // Make the blog schema (in sampledata/) embeddable from examples/ — @embedFile
+    // can't reach outside the module's own directory, so register it by name.
+    example_mod.addAnonymousImport("blog_schema.sql", .{ .root_source_file = b.path("sampledata/blog_schema.sql") });
+    const example_exe = b.addExecutable(.{ .name = "blog_crud", .root_module = example_mod });
+    b.installArtifact(example_exe); // also installs zig-out/bin/blog_crud
+    const example_run = b.addRunArtifact(example_exe);
+    example_run.setCwd(b.path("."));
+    // Forward `zig build example -- <db>` arguments to the program, when supported.
+    if (@hasField(@TypeOf(b.*), "args")) {
+        if (b.args) |args| example_run.addArgs(args);
+    }
+    b.step("example", "Run the interactive blog CRUD terminal app").dependOn(&example_run.step);
 }
 
 /// The library translation-unit list. Sourced from vendor/tu.txt (one C
