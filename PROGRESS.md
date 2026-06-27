@@ -70,16 +70,34 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
 
 ### Known issues
 
-- **`where2-6.17.2` aborts under `testfixture_zig`** (pre-existing; *not* from
-  this session's work — reproduced with the build.zig bitfield change stashed).
-  C `expr.c:3973` `sqlite3CodeSubselect` asserts
-  `VdbeGetOp(v, pExpr->y.sub.iAddr-1)->opcode==OP_BeginSubrtn`, i.e. a ported
-  module's IN/subquery codegen left the instruction before the subroutine entry
-  as something other than `OP_BeginSubrtn` (materialized-IN / subroutine
-  address bookkeeping). The baseline all-C testfixture passes where2. Next
-  focused task; likely in `expr`-adjacent codegen as emitted/assembled by a
-  ported module (vdbeaux/select/where). The rest of `where2` (through 6.16) and
-  all of `where` (318 tests) pass under `--zig`.
+- **Op-array corruption on EXISTS/subquery over a compound (UNION ALL) view**
+  (pre-existing; reproduced with this session's changes stashed). Surfaces as
+  `where2-6.17.2` aborting under `testfixture_zig` on C `expr.c:3973`
+  `assert(VdbeGetOp(v,pExpr->y.sub.iAddr-1)->opcode==OP_BeginSubrtn)`, and as a
+  hard crash in the **production** zig shell (`opSavepoint` null-deref —
+  executing opcode 0).
+
+  Minimal repro (crashes the production shell, data-independent):
+  ```sql
+  CREATE TABLE a(x INTEGER PRIMARY KEY,y);
+  CREATE TABLE b(p INTEGER PRIMARY KEY,q);
+  CREATE VIEW v AS SELECT x,y FROM a UNION ALL SELECT p,q FROM b;
+  SELECT EXISTS(SELECT 1 FROM v WHERE x=1) FROM v;
+  ```
+  Root symptom: the generated program's main body is partially **zeroed** — for
+  the minimal case `Init→44`, then the prologue `Transaction; Goto 1`, but
+  op-slots `1..36` are all opcode-0 (`OP_Savepoint`) with only the tail
+  (`37..43`, the result loop) intact. Execution `Goto 1` lands in the zeroed
+  region → dispatches `OP_Savepoint` → `opSavepoint` reads a NULL name. A few of
+  the zeroed slots have operands set (e.g. `p2=49`) but opcode==0, i.e. the
+  **opcode byte specifically was cleared** while operands survived — points at a
+  bad write to `VdbeOp.opcode` (offset 0) during codegen, *not* simple
+  array-growth (growOpArray/realloc preserve content). Needs debugging of the
+  co-routine-inside-subroutine assembly in `vdbeaux.zig` (op array / address
+  bookkeeping) for this pattern. Does **not** trigger for non-compound views,
+  compound subselects without the rowid (`WHERE x=1`) lookup, or plain
+  `x IN (…)`. Baseline all-C testfixture is fine; `where` (318) and `where2`
+  through 6.16 pass under `--zig`.
 
 **Fixed this session (RETURNING was completely broken + an Index-flag bug):**
 
