@@ -221,7 +221,7 @@ const OP_IdxInsert: c_int = 140;
 const OP_FinishSeek: c_int = 145;
 const OP_VColumn: c_int = 178;
 
-const OP_OpenWrite: c_int = 113; // sqlite3OpenTableAndIndices opcode arg
+const OP_OpenWrite: c_int = 116; // sqlite3OpenTableAndIndices opcode arg
 
 // ─── accessors ───────────────────────────────────────────────────────────────
 inline fn pDb(pParse: ?*anyopaque) ?*anyopaque {

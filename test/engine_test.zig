@@ -326,6 +326,31 @@ test "ANALYZE writes and loads index statistics" {
     );
 }
 
+// RETURNING across INSERT/UPDATE/DELETE/UPSERT. The functional battery never
+// exercised RETURNING, which had hidden two bugs: a deleteReturning() crash
+// (build.zig) and an OP_OpenWrite opcode misnumber in update.zig that made
+// UPDATE … RETURNING read the rowid for unchanged columns. Guard both here.
+test "RETURNING on insert/update/delete/upsert" {
+    var db = try Db.open();
+    defer db.close();
+    var buf: [64]u8 = undefined;
+    try db.exec("CREATE TABLE t(a,b)");
+    try testing.expectEqualStrings("1|2", try db.rows("INSERT INTO t VALUES(1,2) RETURNING a,b", &buf));
+    // The regression: updating only b must still return the unchanged a (=1),
+    // not the rowid. (Before the OP_OpenWrite fix this returned the rowid.)
+    try testing.expectEqualStrings("1|9", try db.rows("UPDATE t SET b=9 RETURNING a,b", &buf));
+    try testing.expectEqualStrings("11", try db.rows("UPDATE t SET b=b+1 RETURNING a+b", &buf));
+    try db.exec("INSERT INTO t VALUES(2,2),(3,3)");
+    try testing.expectEqualStrings("2|3", try db.rows("DELETE FROM t WHERE a>1 RETURNING a", &buf));
+    // UPSERT … RETURNING.
+    try db.exec("CREATE TABLE u(k UNIQUE, v)");
+    try db.exec("INSERT INTO u VALUES(1,1)");
+    try testing.expectEqualStrings("1|99", try db.rows(
+        "INSERT INTO u VALUES(1,2) ON CONFLICT(k) DO UPDATE SET v=99 RETURNING k,v",
+        &buf,
+    ));
+}
+
 test "view and trigger" {
     var db = try Db.open();
     defer db.close();
