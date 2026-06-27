@@ -3329,7 +3329,7 @@ export fn sqlite3AllocateIndexObject(db: Cptr, nCol: c_int, nExtra: c_int, ppExt
     }
     return p;
 }
-const sizeof_Index = off("sizeof_Index", 120);
+const sizeof_Index = off("sizeof_Index", 112); // probed: 112 (was an over-sized 120)
 
 export fn sqlite3HasExplicitNulls(pParse: Cptr, pList: Cptr) c_int {
     if (pList != null) {
@@ -4292,7 +4292,7 @@ export fn sqlite3UniqueConstraint(pParse: Cptr, onError: c_int, pIdx: Cptr) void
     const zErr = sqlite3StrAccumFinish(@ptrCast(&errMsg));
     sqlite3HaltConstraint(pParse, if (isPrimaryKeyIndex(pIdx)) SQLITE_CONSTRAINT_PRIMARYKEY else SQLITE_CONSTRAINT_UNIQUE, onError, zErr, P4_DYNAMIC, P5_ConstraintUnique);
 }
-const sizeof_StrAccum = off("sizeof_sqlite3_str", 48);
+const sizeof_StrAccum = off("sizeof_StrAccum", 32); // c_layout-backed (was an over-sized 48)
 
 export fn sqlite3RowidConstraint(pParse: Cptr, onError: c_int, pTab: Cptr) void {
     var zMsg: ?[*:0]u8 = undefined;
