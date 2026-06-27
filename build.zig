@@ -59,6 +59,7 @@ const ported_modules = [_][]const u8{
     "fault.c", // -> src/fault.zig (benign-malloc fault hooks)
     "mem1.c", // -> src/mem1.zig (default system-malloc allocator)
     "complete.c", // -> src/complete.zig (sqlite3_complete SQL tokenizer)
+    "ctime.c", // -> src/ctime.zig (compile-option list: sqlite3CompileOptions)
     "memjournal.c", // -> src/memjournal.zig (in-memory rollback journal)
     "fts3_hash.c", // -> src/fts3_hash.zig (FTS3 standalone hash table)
     "utf.c", // -> src/utf.zig (UTF-8/16 translation; first Mem-coupled port)
