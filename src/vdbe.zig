@@ -233,12 +233,15 @@ const PAGER_JOURNALMODE_OFF: c_int = 2;
 const TF_Strict: u32 = 0x00010000;
 const COLFLAG_VIRTUAL: u16 = 0x0020;
 const COLFLAG_GENERATED: u16 = 0x0060;
-const COLTYPE_ANY: u8 = 0;
-const COLTYPE_BLOB: u8 = 1;
-const COLTYPE_INT: u8 = 2;
-const COLTYPE_INTEGER: u8 = 3;
-const COLTYPE_REAL: u8 = 4;
-const COLTYPE_TEXT: u8 = 5;
+// Column.eCType values (vendored sqliteInt.h): CUSTOM=0, ANY=1, BLOB=2, INT=3,
+// INTEGER=4, REAL=5, TEXT=6. These were off-by-one (missing CUSTOM), so STRICT
+// type checks matched the wrong type or (for TEXT) fell through with no check.
+const COLTYPE_ANY: u8 = 1;
+const COLTYPE_BLOB: u8 = 2;
+const COLTYPE_INT: u8 = 3;
+const COLTYPE_INTEGER: u8 = 4;
+const COLTYPE_REAL: u8 = 5;
+const COLTYPE_TEXT: u8 = 6;
 
 const NC_SelfRef: c_int = 0x00002e;
 
