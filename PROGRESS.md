@@ -4,9 +4,21 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 59 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 60 modules ported, incl. the full VDBE interpreter
 
-**Latest (59th module): `analyze.c` → `src/analyze.zig` — the ANALYZE command
+**Latest (60th module): `upsert.c` → `src/upsert.zig` — UPSERT / ON CONFLICT.**
+Implements the whole Upsert lifecycle + codegen
+(`sqlite3Upsert{Delete,Dup,New,AnalyzeTarget,NextIsIPK,OfIndex,DoUpdate}`).
+Validated through the production `zig build` across every path upsert.c
+handles: DO UPDATE / DO NOTHING, `excluded.*`, composite-UNIQUE targets,
+partial-index targets, expression-index targets (XN_EXPR/aColExpr), WITHOUT
+ROWID (the `sqlite3PrimaryKeyIndex`/`OP_Found` leg of DoUpdate), and chained
+multi-ON CONFLICT. `zig build test` green.
+
+While validating module 60, found + fixed a **RETURNING crash** and diagnosed
+two more pre-existing bugs — see Known issues.
+
+**59th module: `analyze.c` → `src/analyze.zig` — the ANALYZE command
 (statInit/statPush/openStatTable writing `sqlite_stat1`) and
 `sqlite3AnalysisLoad`/`analysisLoader` (reading stats back so the planner uses
 them). Gold-validated: all upstream `analyze*` TCL tests pass with the Zig
@@ -58,7 +70,44 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
 
 ### Known issues
 
-None currently open.
+Two pre-existing bugs in **build.zig (module 58)** / the UPDATE+RETURNING path,
+both uncovered while validating the upsert port (the functional gate never
+exercised RETURNING or expression-index conflict targets):
+
+1. **`UPDATE … RETURNING` returns wrong values for unchanged columns**
+   (correctness). `UPDATE t SET b=9 RETURNING a` on a rowid table `t(a,b)`
+   yields the *old `b`* instead of `a` — the value read is ~`nCol` registers
+   too low, i.e. it lands in the OLD-record block instead of NEW. Register
+   *allocation* (`update.zig` 922-932) and the new-record population loop match
+   upstream, and **INSERT … RETURNING is correct**, so the fault is specific to
+   the UPDATE OLD+NEW register layout as seen by the RETURNING/AFTER-trigger
+   codegen (trigger.zig / returning-trigger NEW.* → register mapping). Not yet
+   fixed — needs trigger-side investigation. INSERT/DELETE/UPSERT RETURNING all
+   verified correct.
+
+2. **`build.zig` Index bitfield masks are wrong from bit 4 onward.** The byte-1
+   bitfield group omitted `isResized`, shifting `isCovering`/`noSkipScan`/
+   `hasStat1` and pushing `bNoQuery`/`bAscKeyBug`/`bHasVCol`/`bHasExpr` to the
+   wrong byte-2 bits; `bHasExpr` is effectively never set. `analyze.zig` has the
+   **correct** vendored-v3.54.0 layout to copy from (bUnordered 0x04,
+   uniqNotNull 0x08, isResized 0x10, isCovering 0x20, noSkipScan 0x40, hasStat1
+   0x80; byte-2: bNoQuery 0x01, bAscKeyBug 0x02, bHasVCol 0x04, bHasExpr 0x08).
+   Proof: `tools/tcltest.sh` baseline passes upsert1 but `testfixture_zig`
+   (which links the Zig `build.o`) aborts at upsert1-200 on C upsert.c's
+   `assert(pIdx->bHasExpr)`. Lower severity (optimizer hints + a possible
+   `isResized` azColl leak; correct results on common paths) but should be
+   fixed. Only `idxType`/`uniqNotNull` are currently correct, so audit each
+   used bit (idxType, uniqNotNull, isResized, bAscKeyBug) when fixing.
+
+**Fixed this session:** `build.zig deleteReturning` dereferenced the inline
+`Returning.zName` char[40] as a pointer, segfaulting *every* `… RETURNING`
+statement; now passes the buffer address (commit `121e029`).
+
+(Note: `tools/tcltest.sh --zig` cannot validate `analyze`/`upsert` — both come
+from `libsqlite3.a` rather than an individual testfixture object, so the
+`.c`→`.o` swap has nothing to replace. They are validated via the production
+build instead. Making tcltest force archive-only objects into the link is a
+future improvement.)
 
 (Previously tracked: the vtab1-24.2 FTS3 savepoint assertion — FIXED. It turned
 out to share a root cause with an `fkey2` production crash: `OP_Savepoint`'s
