@@ -57,13 +57,13 @@
             sub-agent waves; orchestrator owns shared files + validation + commits.
             Turn 10 is in progress; re-run the script next session for its tail.
 
-[2026-06-27] 12:12:54-17:4x (in progress)  13 turns  ->  TOTAL=541772201  (cum=898189775)
+[2026-06-27] 12:12:54-17:4x (in progress)  13 turns  ->  TOTAL=562283545  (cum=918701119)
     elapsed: ~5h+ wall clock so far (final turn in progress).
     prompt: Reconnect after a drop ("got disconnected"); continue the autonomous
             migration without stopping until the goal is reached.
-    note:   Ported 23 modules this session (63 -> 86): pragma, status, btmutex,
+    note:   Ported 26 modules this session (63 -> 89): pragma, status, btmutex,
             dbpage, dbstat, memdb, malloc, expr, whereexpr, wherecode, where,
-            select, mutex_unix, main, ctime, global, treeview, os_unix, rtree, sqlite3session, fts3, fts3_write, fts3_expr. THE ENTIRE
+            select, mutex_unix, main, ctime, global, treeview, os_unix, rtree, sqlite3session, fts3(+write/expr/snippet/tokenizer/tokenize_vtab). THE ENTIRE
             ACTIVE LINUX CORE ENGINE IS NOW ZIG: global config + ctype tables ->
             os_unix VFS (all file I/O) -> pager/wal -> btree -> vdbe -> tokenize/
             resolve -> expr/where*/select codegen -> func/json/window -> main API.
@@ -77,10 +77,11 @@
             vs pointer, struct bitfield positions, macros-as-extern-fns. Big
             modules (where/main/global/os_unix/mutex) drafted by parallel background
             agents that self-validated -> integrated with 0-to-minimal fixes;
-            orchestrator owns offsets+integration+validation+commits. Remaining is
-            NON-core: optional extensions (fts*/fts5/rtree/icu/session/rbu),
+            orchestrator owns offsets+integration+validation+commits. Core engine + RTree + Session + FTS3/4 are 100% Zig. Sole remaining
+            ACTIVE module: fts5.c (28k generated amalgamation -> a re-vendor sub-
+            project). Other remaining is NON-portable:
             other-platform (os_win/mutex_w32), inactive stubs (mem0/2/3/notify/
             os_kv), generated (parse.c/opcodes.c). Re-run script next session for
             this turn's tail.
 
-# Session actual total so far (cumulative): 898,189,775 tokens.
+# Session actual total so far (cumulative): 918,701,119 tokens.
