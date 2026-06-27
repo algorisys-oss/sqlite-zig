@@ -662,6 +662,18 @@ int main(void) {
     /* memdb.c */
     P(Sqlite3Config, mxMemdbSize);
 
+    /* malloc.c */
+    P(sqlite3, bBenignMalloc);
+    P(Sqlite3Config, szPage);
+    printf("sqlite3_lookaside_pMiddle %zu\n", offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, pMiddle));
+    printf("Sqlite3Config_m_xMalloc %zu\n",   offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xMalloc));
+    printf("Sqlite3Config_m_xFree %zu\n",     offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xFree));
+    printf("Sqlite3Config_m_xRealloc %zu\n",  offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xRealloc));
+    printf("Sqlite3Config_m_xSize %zu\n",     offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xSize));
+    printf("Sqlite3Config_m_xInit %zu\n",     offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xInit));
+    printf("Sqlite3Config_m_xShutdown %zu\n", offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xShutdown));
+    printf("Sqlite3Config_m_pAppData %zu\n",  offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, pAppData));
+
     /* btmutex.c */
     P(Btree, sharable);
     P(Btree, locked);

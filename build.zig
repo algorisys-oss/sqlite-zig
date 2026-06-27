@@ -116,6 +116,7 @@ const ported_modules = [_][]const u8{
     "dbpage.c", // -> src/dbpage.zig (sqlite_dbpage virtual table: raw page read/write)
     "dbstat.c", // -> src/dbstat.zig (dbstat virtual table: per-page btree storage stats)
     "memdb.c", // -> src/memdb.zig (in-memory VFS + sqlite3_serialize/deserialize)
+    "malloc.c", // -> src/malloc.zig (core allocation interface above mem1/mem5)
     "resolve.c", // -> src/resolve.zig (name resolution)
     "vdbe.c", // -> src/vdbe.zig (bytecode interpreter: sqlite3VdbeExec dispatch loop)
     "func.c", // -> src/func.zig (built-in SQL scalar/aggregate functions)
