@@ -4,7 +4,37 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 83 modules; core engine + rtree + session in Zig
+## Current status: Phase 1 — 86 modules; core + rtree + session + FTS3 core in Zig
+
+**Modules 84–86: FTS3/FTS4 full-text search** (atop core + rtree + session):
+- `fts3.c` (84) → `src/fts3.zig` — the FTS3/FTS4 vtab. ALSO fixed a main.zig
+  REGRESSION: sqlite3BuiltinExtensions dropped sqlite3Fts3Init, so FTS3/4 was
+  unregistered ("no such module: fts4") since module 77 — restored.
+- `fts3_write.c` (85) → index writer + segment merging (28 exports).
+- `fts3_expr.c` (86) → the MATCH-query parser.
+  All three mirror fts3Int.h structs file-locally (extern struct, no c_layout
+  offsets). FTS4 validated end-to-end through Zig vtab+writer+parser: MATCH,
+  -NOT, implicit-AND, OR, phrase, NEAR, prefix f*, offsets(), INSERT/UPDATE/
+  DELETE/merge/optimize/integrity-check. Fixed a fts3.zig phrase-cleanup crash
+  (force-unwrapped a null pSegcsr).
+- IN FLIGHT (agents drafting): fts3_snippet.c (snippet/offsets/matchinfo +
+  sqlite3Fts3ExprIterate), fts3_tokenizer.c (tokenizer registry),
+  fts3_tokenize_vtab.c (fts3tokenize vtab) — these complete FTS3.
+
+### Remaining after FTS3 family
+- **FTS5** (active): fts5.c is a 28k-line generated amalgamation (ext/fts5/*.c +
+  Lemon fts5parse). Per project rule, port the individual ext/fts5 sources, not
+  the amalgam — a multi-file sub-project.
+- Non-portable for a Linux engine: parse.c/opcodes.c (generated), os_win/
+  mutex_w32 (Windows), mem0/2/3/notify/os_kv/icu/fts3_icu/rbu (flag-inactive),
+  tclsqlite-ex (TCL harness).
+
+### Known issues (FTS3, to fix later — both in fts3.zig query-eval side)
+- `order=desc` FTS tables corrupt after a segment flush (reproduces with C
+  fts3_write linked → a fts3.zig bug). Default order=asc works.
+- (FIXED in 86) fts3SegReaderCursorFree null force-unwrap crashing phrase cleanup.
+
+## Earlier status: 83 modules; core engine + rtree + session in Zig
 
 **Modules 82–83: the first two self-contained extensions** (atop the complete
 core engine):
