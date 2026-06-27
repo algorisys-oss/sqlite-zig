@@ -57,6 +57,23 @@ Build modes:
 Artifacts land in `zig-out/bin/sqlite3`, `zig-out/bin/sqlite-zig`, and
 `zig-out/lib/libsqlite3.a`.
 
+### Command reference
+
+Everything you can run, at a glance (details in the sections below):
+
+| Command | What it does |
+|---|---|
+| `zig build` | Build `libsqlite3.a` + the `sqlite3`/`sqlite-zig` shell (split, ported-Zig). |
+| `zig build -Damalgamation=true` | Build from the pure-C amalgamation (oracle for diffing). |
+| `zig build -Doptimize=ReleaseFast` | Optimized build (default is Debug). |
+| `zig build run` | Launch the interactive shell. |
+| `zig build smoke` | Build + run a single query, assert exact output. |
+| `zig build test` | **Functional regression battery** (must stay green). |
+| `zig build sample` | Build + integrity-check the **seed** blog DB (`sampledata/blog.db`). |
+| `zig build example` | **Interactive blog CRUD** REPL over `sampledata/blog.db`. |
+| `tools/tcltest.sh --zig <suites>` | Upstream **TCL suite** against the Zig engine. |
+| `zig-out/bin/sqlite-zig <db> "<sql>"` | Run SQL directly (the CLI shell). |
+
 ## Using the `sqlite-zig` executable
 
 `zig build` installs the command-line shell under **two** names:
@@ -99,18 +116,51 @@ zig-out/bin/sqlite-zig t.db "create table x(a); insert into x values(1),(2);"
 sqlite3 t.db "select count(*) from x;"   # stock sqlite3 reads our file -> 2
 ```
 
-## Examples
+## Examples & sample data
 
-[`examples/`](examples/) holds standalone Zig programs that drive the ported
-engine through the C API. The headline one is an interactive blog **CRUD**
-terminal (FTS5 search, triggers, foreign-key cascades):
+### Sample/seed database
+
+[`sampledata/`](sampledata/) holds a real blog schema and seed data —
+users / posts / comments / tags with relations, constraints, an index, a view,
+triggers, and an FTS5 full-text index:
+
+- [`blog_schema.sql`](sampledata/blog_schema.sql) — the schema (DDL + triggers + FTS5).
+- [`blog_seed.sql`](sampledata/blog_seed.sql) — seed rows.
 
 ```bash
-zig build sample     # build sampledata/blog.db (schema + seed) from Zig
-zig build example    # interactive CRUD REPL over sampledata/blog.db
+zig build sample     # run blog_build.zig: (re)create sampledata/blog.db from the
+                     # .sql above via the Zig engine, then integrity-check it
 ```
 
-See [examples/README.md](examples/README.md) for the command list and a sample
+`zig build sample` writes `sampledata/blog.db` and prints a couple of
+verification queries (a view join + an FTS5 search + `PRAGMA integrity_check`).
+Open the result with either shell:
+
+```bash
+zig-out/bin/sqlite-zig sampledata/blog.db ".tables"
+zig-out/bin/sqlite-zig sampledata/blog.db "SELECT * FROM v_post_summary;"
+```
+
+You can also build a database by hand from the SQL files:
+
+```bash
+zig-out/bin/sqlite-zig myblog.db ".read sampledata/blog_schema.sql" ".read sampledata/blog_seed.sql"
+```
+
+### Example programs — [`examples/`](examples/)
+
+Standalone Zig programs that drive the ported engine through the C API. The
+headline one is an interactive blog **CRUD** terminal (FTS5 search, `snippet`,
+triggers, foreign-key cascades):
+
+```bash
+zig build example                       # interactive CRUD REPL over sampledata/blog.db
+BLOG_DB=myblog.db zig-out/bin/blog_crud # ...or point it at another database file
+```
+
+Inside the REPL: `list`, `add`, `view <id>`, `edit <id>`, `publish <id>`,
+`delete <id>`, `search <text>`, `help`, `quit`. See
+[examples/README.md](examples/README.md) for the full command list and a sample
 session.
 
 ## How to verify / test
@@ -165,20 +215,29 @@ zig-out/bin/sqlite3 :memory: ".read test/functional.sql" > test/functional.expec
 
 ### Upstream TCL testfixture suite
 
-SQLite's own test suite runs through `testfixture` (a TCL interpreter + the
-library + test extensions). It's wired here via vendored TCL 8.6.14 headers
-(`vendor/tcl/`) + the system `libtcl8.6` — no `tcl-dev` package needed:
+SQLite's own test suite (the authoritative spec) runs through `testfixture` (a
+TCL interpreter + the library + test extensions). It's wired here via vendored
+TCL 8.6 headers (`vendor/tcl/`) + the system `libtcl8.6` — no `tcl-dev` package
+needed, and the upstream tree stays untouched:
 
 ```bash
-tools/tcltest.sh                       # baseline (upstream C) on a sample set
-tools/tcltest.sh --zig                 # same, but our Zig ports linked in
-tools/tcltest.sh --zig func randexpr1  # specific upstream .test files
+tools/tcltest.sh                                   # baseline: upstream C, sample set
+tools/tcltest.sh --zig                             # same, but our Zig ports linked in
+tools/tcltest.sh --zig fts5simple fts5aa fts5ab    # named suites (batch them — see below)
 ```
 
-`--zig` relinks `testfixture` with our `src/*.zig` objects swapping the matching
-C files, so ports are validated against SQLite's own assertions. Broadening
-beyond the sample set (`veryquick` / `testrunner.tcl`) is the next step — see
-[PROGRESS.md](PROGRESS.md).
+`--zig` builds `testfixture_zig` by replaying SQLite's own link command with each
+`src/<m>.zig` object swapped in for its `.c`, so the suites assert against the
+ported engine. Suite names resolve in `test/` and the extension test dirs
+(`ext/fts5/test`, `ext/rtree`, `ext/session`, `ext/rbu`, `ext/fts3`). Each run
+relinks `testfixture_zig`, so **pass several names in one invocation**.
+
+Current FTS5 results against `testfixture_zig` — **~3,139 assertions, 0 errors**
+(fts5simple/aa/ab/ac, delete, merge, rowid, integrity, rank, prefix, update).
+
+See **[docs/testing.md](docs/testing.md)** for the full validation strategy (the
+three layers, the differential-vs-C method, how the `--zig` swap works, and the
+recurring C→Zig bug patterns the suites catch).
 
 ## Repository layout
 
@@ -194,6 +253,7 @@ beyond the sample set (`veryquick` / `testrunner.tcl`) is the next step — see
 | `test/` | Functional regression battery + golden output. |
 | [plan.md](plan.md) | Phased migration roadmap. |
 | [PROGRESS.md](PROGRESS.md) | Current status, resume point, and how to port a module. |
+| [docs/](docs/) | Design & process notes — [architecture.md](docs/architecture.md), [testing.md](docs/testing.md). |
 | [CLAUDE.md](CLAUDE.md) | Agent/contributor conventions. |
 
 ## License
