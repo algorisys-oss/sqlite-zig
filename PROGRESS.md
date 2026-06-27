@@ -70,38 +70,39 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
 
 ### Known issues
 
-Two pre-existing bugs in **build.zig (module 58)** / the UPDATE+RETURNING path,
-both uncovered while validating the upsert port (the functional gate never
-exercised RETURNING or expression-index conflict targets):
+- **`where2-6.17.2` aborts under `testfixture_zig`** (pre-existing; *not* from
+  this session's work — reproduced with the build.zig bitfield change stashed).
+  C `expr.c:3973` `sqlite3CodeSubselect` asserts
+  `VdbeGetOp(v, pExpr->y.sub.iAddr-1)->opcode==OP_BeginSubrtn`, i.e. a ported
+  module's IN/subquery codegen left the instruction before the subroutine entry
+  as something other than `OP_BeginSubrtn` (materialized-IN / subroutine
+  address bookkeeping). The baseline all-C testfixture passes where2. Next
+  focused task; likely in `expr`-adjacent codegen as emitted/assembled by a
+  ported module (vdbeaux/select/where). The rest of `where2` (through 6.16) and
+  all of `where` (318 tests) pass under `--zig`.
 
-1. **`UPDATE … RETURNING` returns wrong values for unchanged columns**
-   (correctness). `UPDATE t SET b=9 RETURNING a` on a rowid table `t(a,b)`
-   yields the *old `b`* instead of `a` — the value read is ~`nCol` registers
-   too low, i.e. it lands in the OLD-record block instead of NEW. Register
-   *allocation* (`update.zig` 922-932) and the new-record population loop match
-   upstream, and **INSERT … RETURNING is correct**, so the fault is specific to
-   the UPDATE OLD+NEW register layout as seen by the RETURNING/AFTER-trigger
-   codegen (trigger.zig / returning-trigger NEW.* → register mapping). Not yet
-   fixed — needs trigger-side investigation. INSERT/DELETE/UPSERT RETURNING all
-   verified correct.
+**Fixed this session (RETURNING was completely broken + an Index-flag bug):**
 
-2. **`build.zig` Index bitfield masks are wrong from bit 4 onward.** The byte-1
-   bitfield group omitted `isResized`, shifting `isCovering`/`noSkipScan`/
-   `hasStat1` and pushing `bNoQuery`/`bAscKeyBug`/`bHasVCol`/`bHasExpr` to the
-   wrong byte-2 bits; `bHasExpr` is effectively never set. `analyze.zig` has the
-   **correct** vendored-v3.54.0 layout to copy from (bUnordered 0x04,
-   uniqNotNull 0x08, isResized 0x10, isCovering 0x20, noSkipScan 0x40, hasStat1
-   0x80; byte-2: bNoQuery 0x01, bAscKeyBug 0x02, bHasVCol 0x04, bHasExpr 0x08).
-   Proof: `tools/tcltest.sh` baseline passes upsert1 but `testfixture_zig`
-   (which links the Zig `build.o`) aborts at upsert1-200 on C upsert.c's
-   `assert(pIdx->bHasExpr)`. Lower severity (optimizer hints + a possible
-   `isResized` azColl leak; correct results on common paths) but should be
-   fixed. Only `idxType`/`uniqNotNull` are currently correct, so audit each
-   used bit (idxType, uniqNotNull, isResized, bAscKeyBug) when fixing.
+1. **`build.zig deleteReturning`** dereferenced the inline `Returning.zName`
+   char[40] as a pointer → **every `… RETURNING` statement segfaulted**. Now
+   passes the buffer address (commit `121e029`).
+2. **`update.zig` `OP_OpenWrite` misnumbered 113 → 116.** 113 is actually
+   `OP_ReopenIdx`, so the UPDATE data cursor opened as an index cursor and
+   `UPDATE … RETURNING` returned the *rowid* for any unchanged column. Audited
+   every `OP_* = n` constant across `src/*.zig` vs opcodes.h — this was the only
+   one wrong (commit `de664ed`).
+3. **`build.zig` Index bitfield masks** were laid out for an older field order
+   (byte-1 omitted `isResized`; byte-2 bits for `bAscKeyBug`/`bHasVCol`/
+   `bHasExpr` shifted; `isResized` placed in a bogus third byte) → `bHasExpr`
+   set at the wrong bit and read as 0. Probed the real layout
+   (`tools/bitprobe.c`, identical prod/testfixture) and corrected it (commit
+   `d3384fc`). Now `testfixture_zig` passes upsert1 (36 tests) where it
+   previously aborted on `assert(pIdx->bHasExpr)`; index/index2/index3/
+   indexedby/where all 0 errors under `--zig`.
 
-**Fixed this session:** `build.zig deleteReturning` dereferenced the inline
-`Returning.zName` char[40] as a pointer, segfaulting *every* `… RETURNING`
-statement; now passes the buffer address (commit `121e029`).
+A new `engine_test` "RETURNING on insert/update/delete/upsert" guards #1 and #2
+in the gate (the functional battery had no RETURNING coverage, which is why
+these survived).
 
 (Note: `tools/tcltest.sh --zig` cannot validate `analyze`/`upsert` — both come
 from `libsqlite3.a` rather than an individual testfixture object, so the
