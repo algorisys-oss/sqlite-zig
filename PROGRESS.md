@@ -4,7 +4,39 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 81 modules; the ENTIRE ACTIVE LINUX CORE is now Zig
+## Current status: Phase 1 — 83 modules; core engine + rtree + session in Zig
+
+**Modules 82–83: the first two self-contained extensions** (atop the complete
+core engine):
+- `rtree.c` (82) → `src/rtree.zig` — R*Tree spatial vtabs + the geopoly extension
+  (geopoly.c is #include'd in, so one Zig module). Byte-exact big-endian node
+  format; agent self-validated byte-identical to C (5000-row 3-D rtree + full
+  geopoly) and fixed a real rtreeStepToLeaf double-pop bug.
+- `sqlite3session.c` (83) → `src/sqlite3session.zig` — session/changeset/
+  changegroup/rebaser (59 exports); changeset binary format byte-exact (emits
+  byte-identical changesets to C).
+
+### Remaining work (all NON-core)
+- **FTS3 family** (active via FTS4): fts3.c, fts3_write.c, fts3_snippet.c,
+  fts3_expr.c, fts3_tokenizer.c, fts3_tokenize_vtab.c (~16k lines, share fts3Int.h;
+  fts3_hash/porter/tokenizer1/unicode/unicode2/aux already ported). Portable
+  per-file.
+- **FTS5** (active): fts5.c is a 28k-line AMALGAMATION (generated: ext/fts5/*.c +
+  Lemon fts5parse). Per the project rule (don't hand-port generated files), the
+  correct approach is to port the individual ext/fts5/fts5_*.c sources, not the
+  amalgam — a multi-file sub-project.
+- **Not portable for a Linux engine:** parse.c/opcodes.c (generated from
+  parse.y/vdbe.c), os_win.c/mutex_w32.c (Windows), mem0/2/3.c/notify.c/os_kv.c/
+  icu.c/fts3_icu.c/sqlite3rbu.c (flag-inactive → compile to nothing), tclsqlite-ex.c
+  (TCL test harness, non_tu).
+
+### Known issues added this batch
+- `sqlite3_preupdate_new` (vdbeapi.zig) returns SQLITE_NULL for an INTEGER PRIMARY
+  KEY rowid-alias column (iPKey path mis-fires) → breaks session change-recording
+  for rowid tables (WITHOUT ROWID / non-alias-PK work). Pre-existing, reproducible
+  without session; a vdbeapi fix for later. See Known issues.
+
+## Earlier status: 81 modules; the ENTIRE ACTIVE LINUX CORE is now Zig
 
 **Modules 76–81 (this batch) complete the core engine:**
 - `mutex_unix.c` (76) — pthreads mutex backend (every mutex op).
