@@ -626,5 +626,14 @@ int main(void) {
     P(Cte, zName);
     P(Cte, eM10d);
 
+    /* vdbesort.c (nAllField/aSortFlags/aColl already emitted above) */
+    P(VdbeCursor, pKeyInfo);
+    P(KeyInfo, db);
+    P(UnpackedRecord, errCode);
+    P(sqlite3, nMaxSorterMmap);
+    P(sqlite3, nSpill);
+    P(Sqlite3Config, szPma);
+    P(Sqlite3Config, bSmallMalloc);
+
     return 0;
 }

@@ -530,6 +530,13 @@ const prod = struct {
     pub const Cte_pCols: usize = 8;
     pub const Cte_zName: usize = 0;
     pub const Cte_eM10d: usize = 40;
+    pub const VdbeCursor_pKeyInfo: usize = 48;
+    pub const KeyInfo_db: usize = 16;
+    pub const UnpackedRecord_errCode: usize = 31;
+    pub const sqlite3_nMaxSorterMmap: usize = 188;
+    pub const sqlite3_nSpill: usize = 808;
+    pub const Sqlite3Config_szPma: usize = 336;
+    pub const Sqlite3Config_bSmallMalloc: usize = 8;
 };
 
 /// --dev testfixture config (SQLITE_DEBUG + SQLITE_TEST).
@@ -1055,6 +1062,13 @@ const tf = struct {
     pub const Cte_pCols: usize = 8;
     pub const Cte_zName: usize = 0;
     pub const Cte_eM10d: usize = 40;
+    pub const VdbeCursor_pKeyInfo: usize = 56;
+    pub const KeyInfo_db: usize = 16;
+    pub const UnpackedRecord_errCode: usize = 31;
+    pub const sqlite3_nMaxSorterMmap: usize = 188;
+    pub const sqlite3_nSpill: usize = 808;
+    pub const Sqlite3Config_szPma: usize = 336;
+    pub const Sqlite3Config_bSmallMalloc: usize = 8;
 };
 
 /// The layout namespace matching the current build.
