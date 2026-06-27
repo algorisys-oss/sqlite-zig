@@ -133,6 +133,8 @@ const ported_modules = [_][]const u8{
     "json.c", // -> src/json.zig (JSON1/JSONB scalar+aggregate fns + json_each/json_tree vtabs)
     "window.c", // -> src/window.zig (window functions + OVER-clause/frame codegen)
     "treeview.c", // -> src/treeview.zig (DEBUG-only AST/plan tree printing)
+    "rtree.c", // -> src/rtree.zig (R*Tree + geopoly virtual tables)
+    "sqlite3session.c", // -> src/sqlite3session.zig (session/changeset/changegroup/rebaser)
 };
 
 pub fn build(b: *std.Build) void {
