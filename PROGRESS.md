@@ -4,7 +4,13 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 62 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 63 modules ported, incl. the full VDBE interpreter
+
+**63rd module: `vdbesort.c` → `src/vdbesort.zig` — the external merge sorter
+(ORDER BY / GROUP BY / CREATE INDEX): in-memory sort, PMA spill-to-disk,
+multi-way merge, multi-threaded worker paths. Validated `--zig`: orderby8 201,
+orderby1 65, sort2, sorterref (0 errors), 150k-row external sorts correct.
+Drafted by a background agent, integrated against HEAD.**
 
 **62nd module: `alter.c` → `src/alter.zig` — ALTER TABLE (RENAME TABLE / ADD /
 DROP / RENAME COLUMN, ADD/DROP CONSTRAINT, the rename-token walkers + 9 internal
@@ -84,7 +90,17 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
 
 ### Known issues
 
-None currently open.
+Two pre-existing bugs surfaced (proven *not* in vdbesort — both reproduce with C
+`vdbesort.c` linked); both are off the default path:
+
+- **`printf.zig` va_list crash from a worker thread.** With `PRAGMA threads=N>0`,
+  a background sorter thread's temp-file name creation
+  (`unixGetTempname`→`sqlite3_snprintf`→`sqlite3_str_vappendf`) crashes in the
+  va_list path. Default `PRAGMA threads` is 0, so normal use is unaffected;
+  `testfixture_zig` (sane stack) passes the `nWorker=3` sort combos.
+- **`btree.zig balance` OOM panic** (btree.zig:5610) on a `fakeheap`/OOM-injection
+  path during a post-sort index insert (`sort.test` combo 5 / `sortfault` final
+  abort). A btree OOM-unwind issue, not sorter.
 
 **Fixed (STRICT enforcement + view/op-array corruption + EXPLAIN-reprepare):**
 
