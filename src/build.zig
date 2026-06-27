@@ -1710,7 +1710,9 @@ fn beginTableError(pParse: Cptr, db: Cptr, zName: ?[*:0]u8) void {
 fn deleteReturning(db: Cptr, pArg: ?*anyopaque) callconv(.c) void {
     const pRet = pArg;
     const pHash = base(dbSchema(db, 1)) + Schema_trigHash;
-    _ = sqlite3HashInsert(@ptrCast(pHash), @ptrCast(rdp(pRet, Returning_zName)), null);
+    // zName is an inline char[40]; pass its address (like the matching insert at
+    // sqlite3AddReturning), not the bytes read from it.
+    _ = sqlite3HashInsert(@ptrCast(pHash), @ptrCast(base(pRet) + Returning_zName), null);
     sqlite3ExprListDelete(db, rdp(pRet, Returning_pReturnEL));
     sqlite3DbFree(db, pRet);
 }
