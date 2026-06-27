@@ -49,7 +49,7 @@ FIXTURE=./testfixture
 # config (SQLITE_DEBUG/SQLITE_TEST) so struct layouts / test instrumentation
 # match the testfixture C. Each is swapped in for upstream src/<stem>.c in the
 # testfixture link command.
-MODULES=(global os_unix random hash bitvec rowset fault mem1 complete ctime memjournal fts3_hash fts3 fts3_write fts3_expr utf os fts3_porter fts3_tokenizer1 fts3_unicode carray table fts3_unicode2 threads mutex_noop mutex_unix mem5 stmt mutex vdbetrace legacy main pcache pcache1 printf fts3_aux callback vdbevtab util loadext vtab prepare auth vacuum attach backup date vdbeblob fkey trigger pager wal btree vdbemem vdbeapi vdbeaux walker update delete insert resolve vdbe func json window rtree session build analyze upsert tokenize alter vdbesort treeview pragma status btmutex dbpage dbstat memdb malloc expr whereexpr wherecode where select)
+MODULES=(global os_unix random hash bitvec rowset fault mem1 complete ctime memjournal fts3_hash fts3 fts3_write fts3_expr fts3_snippet fts3_tokenizer fts3_tokenize_vtab utf os fts3_porter fts3_tokenizer1 fts3_unicode carray table fts3_unicode2 threads mutex_noop mutex_unix mem5 stmt mutex vdbetrace legacy main pcache pcache1 printf fts3_aux callback vdbevtab util loadext vtab prepare auth vacuum attach backup date vdbeblob fkey trigger pager wal btree vdbemem vdbeapi vdbeaux walker update delete insert resolve vdbe func json window rtree session build analyze upsert tokenize alter vdbesort treeview pragma status btmutex dbpage dbstat memdb malloc expr whereexpr wherecode where select)
 if [ "$ZIG" = 1 ]; then
   ( cd "$PROJ" && zig build test-objs -Dtestfixture=true ) >zigobjs.log 2>&1 \
     || { echo "FATAL: zig build test-objs failed"; cat zigobjs.log; exit 1; }
