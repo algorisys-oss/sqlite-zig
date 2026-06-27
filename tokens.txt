@@ -57,22 +57,25 @@
             sub-agent waves; orchestrator owns shared files + validation + commits.
             Turn 10 is in progress; re-run the script next session for its tail.
 
-[2026-06-27] 12:12:54-15:21:50 (in progress)  10 turns  ->  TOTAL=120261060  (cum=476678634)
-    elapsed: ~3h09m wall clock so far (final turn in progress, agents drafting).
+[2026-06-27] 12:12:54-16:56:05 (in progress)  12 turns  ->  TOTAL=343897632  (cum=700315206)
+    elapsed: ~4h43m wall clock so far (final turn in progress).
     prompt: Reconnect after a drop ("got disconnected"); continue the autonomous
             migration without stopping until the goal is reached.
-    note:   Ported 8 modules this session (63 -> 71): pragma, status, btmutex,
-            dbpage, dbstat, memdb, malloc, and expr.c (the big one: ~5.4k-line
-            expression code generator, 112 exports). Skipped notify.c (inactive
-            flag -> 0 symbols). Fixed a real pre-existing crash (sqlite3FinishCoding
-            negative schema_cookie u32+@intCast panic) and 6 expr.zig integration
-            bugs (inline-array deref, wrong P4_*/SRT_* constants, FUNC_RETURNED
-            sentinel, ExprCodeExprList OMITREF two-counter loop, FG_fixedSchema
-            bit). Proved 2 surfaced bugs (compound-IN DEBUG segfault, FILTER+multi-
-            aggregate) are PRE-EXISTING by re-linking C expr.c. Discovered+documented
-            the testfixture --zig swap limitation (library-core modules not swapped).
-            Final turn: launched 4 parallel drafting agents for the remaining core
-            quintet (whereexpr, wherecode, where, select); re-run the script next
-            session for this turn's tail + those integrations.
+    note:   Ported 12 modules this session (63 -> 75): pragma, status, btmutex,
+            dbpage, dbstat, memdb, malloc, expr, whereexpr, wherecode, where,
+            select. The ENTIRE SQL COMPILER is now Zig (tokenize->resolve->
+            expr/where*/select codegen->VDBE->btree->pager). Skipped notify.c
+            (inactive). Fixed a real pre-existing crash (sqlite3FinishCoding
+            schema_cookie). expr: 6 integration bugs. select: 4 bugs incl.
+            SQLITE_DYNAMIC=&sqlite3RowSetClear (not 1) and TF_Ephemeral=0x4000
+            (not 0x2). whereexpr: 3 bugs (iColumn i16, StrBINARY char-array,
+            Toupper/Tolower macros). where: agent self-validated (20/20 + EXPLAIN
+            byte-identical) -> 0 integration fixes. Big modules drafted by parallel
+            background agents; orchestrator owns offsets+integration+validation+
+            commits. Recurring bug classes: hardcoded constants (P4_/SRT_/SF_/TF_/
+            SQLITE_DYNAMIC) wrong, i16 fields read as c_int, char[]-symbol address,
+            inline-array vs pointer, struct bitfield bit positions. Remaining core:
+            main.c, global.c (deferred), os_unix.c. Re-run script next session for
+            this turn's tail.
 
-# Session actual total so far (cumulative): 476,678,634 tokens.
+# Session actual total so far (cumulative): 700,315,206 tokens.
