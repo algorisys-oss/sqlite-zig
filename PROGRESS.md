@@ -99,7 +99,22 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
   `x IN (…)`. Baseline all-C testfixture is fine; `where` (318) and `where2`
   through 6.16 pass under `--zig`.
 
-**Fixed this session (RETURNING was completely broken + an Index-flag bug):**
+- **Two benign over-sized literals in build.zig** (found by the offset audit;
+  not corruption, just waste): `sizeof_Index` fallback = 120 (real 112, build.zig:3330)
+  over-allocates 8 bytes/index; `sizeof_sqlite3_str` = 48 (real 32, build.zig:4293)
+  over-sizes a stack StrAccum. Both self-consistent. To fold into the next
+  build.zig edit. (analyze.zig already uses the correct 112.)
+
+**Fixed this session (RETURNING was completely broken + 2 Index-flag bugs):**
+
+0. **`Index_bHasExpr_byte` off-by-one** in delete.zig & insert.zig (101→100,
+   commit `67894c4`). bHasExpr is at byte onError+2, not onError+3 (padding), so
+   `idxBHasExpr()` always read false → expression/virtual-column index
+   maintenance shortcuts were skipped on DELETE/UPDATE. Found by an audit of all
+   ported modules' hardcoded offsets/opcodes/bitfield-masks vs probed ground
+   truth (the audit otherwise came back clean: all 488 opcode constants and the
+   other live offset fallbacks/bitfield masks verified correct).
+
 
 1. **`build.zig deleteReturning`** dereferenced the inline `Returning.zName`
    char[40] as a pointer → **every `… RETURNING` statement segfaulted**. Now
