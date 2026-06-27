@@ -131,6 +131,7 @@ const ported_modules = [_][]const u8{
     "func.c", // -> src/func.zig (built-in SQL scalar/aggregate functions)
     "json.c", // -> src/json.zig (JSON1/JSONB scalar+aggregate fns + json_each/json_tree vtabs)
     "window.c", // -> src/window.zig (window functions + OVER-clause/frame codegen)
+    "treeview.c", // -> src/treeview.zig (DEBUG-only AST/plan tree printing)
 };
 
 pub fn build(b: *std.Build) void {

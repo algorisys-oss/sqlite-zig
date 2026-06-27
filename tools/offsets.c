@@ -678,6 +678,9 @@ int main(void) {
     /* global.c */
     P(Sqlite3Config, mxStrlen);
 
+    /* treeview.c */
+    P(Upsert, isDoUpdate);
+
     /* main.c — connection control surface */
     P(sqlite3, lastRowid);
     P(sqlite3, pSavepoint);
