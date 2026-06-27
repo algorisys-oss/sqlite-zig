@@ -4,7 +4,16 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 69 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 70 modules ported, incl. the full VDBE interpreter
+
+**70th module: `malloc.c` → `src/malloc.zig` — the core allocation interface
+above mem1/mem5** (public sqlite3_malloc* API + internal sqlite3DbMalloc*/
+sqlite3OomFault/ApiExit/…; 37 exports). Feeds the SQLITE_STATUS_MEMORY_*
+counters via the just-ported status.zig. Validated via the **main build**
+(functional + 200k-blob/5000-row-CTE smoke green; clean link = C dropped);
+malloc.c is library-core so the testfixture `--zig` swap can't reach it. Its
+`malloc.test --zig` run aborts at malloc-13.transient.284 on the pre-existing
+OOM-unwind double-free (Known issues) — baseline C fixture passes, so unrelated.
 
 **Modules 65–69 (batch): `status.c`, `btmutex.c`, `dbpage.c`, `dbstat.c`,
 `memdb.c` → `src/{status,btmutex,dbpage,dbstat,memdb}.zig`.** Drafted by parallel
