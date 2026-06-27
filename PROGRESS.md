@@ -4,7 +4,27 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 89 modules; core + rtree + session + FTS3 (complete) in Zig
+## Current status: Phase 1 — 90 modules; FTS5 integrated (1 known index bug)
+
+**FTS5 is now ported & wired** (module 90): the 28k-line fts5.c amalgamation →
+src/fts5.zig (root) @import-ing 14 modular sub-files (fts5_int foundation +
+varint/buffer/hash/unicode2/vocab/config/tokenize/aux/fts5parse/expr/index/
+storage/main). The ~26k-line FTS5 object LINKED CLEANLY on the first integration.
+WORKS: CREATE/INSERT, MATCH (column filter, AND/OR/NOT, phrase, NEAR, prefix*),
+bm25 rank, highlight(), snippet(), fts5vocab, porter/unicode61 tokenizers,
+integrity_check on small data. Fixed at integration: fts5_vocab %%-over-escaping;
+fts5_index fts5TestTerm null force-unwrap.
+KNOWN BUG (being fixed by an agent): a segment spanning >1 leaf page (~>250 terms)
+writes a malformed b-tree (integrity_check "malformed inverted index"; large MATCH
+counts short — 2000-row 'common' → 1573). Single-page segments + small merges are
+correct. Bug is in fts5_index.zig's multi-page segment writer (pgidx/dlidx/
+b-tree-node/page-split). Repro: 300 terms in one txn → malformed.
+
+This is the LAST active port. After the index bug: 90/105, everything active is
+Zig. The other 15 files are non-portable (generated parse.c/opcodes.c, Windows
+os_win/mutex_w32, flag-inactive mem0/2/3/notify/os_kv/icu/fts3_icu/rbu, TCL harness).
+
+## Earlier status: 89 modules; core + rtree + session + FTS3 (complete) in Zig
 
 **Modules 87–89 complete the FTS3 family** — full-text search is now 100% Zig:
 `fts3_snippet.c` (snippet/offsets/matchinfo + sqlite3Fts3ExprIterate, byte-identical
