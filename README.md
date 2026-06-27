@@ -117,6 +117,64 @@ zig-out/bin/sqlite-zig t.db "create table x(a); insert into x values(1),(2);"
 sqlite3 t.db "select count(*) from x;"   # stock sqlite3 reads our file -> 2
 ```
 
+### Try it from the command line
+
+Copy-paste one-liners that exercise different subsystems of the ported engine
+(all run against `:memory:`; expected output shown after `# ->`). Set
+`S=zig-out/bin/sqlite-zig` first.
+
+```bash
+S=zig-out/bin/sqlite-zig
+
+# version (the engine self-reports upstream's number)
+$S :memory: "select sqlite_version();"                              # -> 3.54.0
+
+# math functions + JSON1
+$S :memory: "select abs(-5), round(3.14159,2), json_extract('{\"a\":42}','\$.a');"
+                                                                    # -> 5|3.14|42
+
+# window functions + CTE
+$S :memory: "WITH t(n) AS (VALUES(10),(20),(30))
+             SELECT n, sum(n) OVER (ORDER BY n) AS running FROM t;"
+                                                          # -> 10|10 / 20|30 / 30|60
+
+# join + aggregate + GROUP BY
+$S :memory: "CREATE TABLE a(id,x); CREATE TABLE b(id,y);
+             INSERT INTO a VALUES(1,'p'),(2,'q');
+             INSERT INTO b VALUES(1,10),(1,20),(2,5);
+             SELECT a.x, sum(b.y) FROM a JOIN b ON a.id=b.id GROUP BY a.x;"
+                                                                 # -> p|30 / q|5
+
+# FTS5 full-text search + highlight()
+$S :memory: "CREATE VIRTUAL TABLE docs USING fts5(body);
+             INSERT INTO docs VALUES('the zig port of sqlite'),('full text search');
+             SELECT rowid, highlight(docs,0,'[',']') FROM docs WHERE docs MATCH 'zig OR search';"
+                              # -> 1|the [zig] port of sqlite / 2|full text [search]
+
+# R-Tree spatial index
+$S :memory: "CREATE VIRTUAL TABLE sp USING rtree(id,x0,x1,y0,y1);
+             INSERT INTO sp VALUES(1,0,1,0,1),(2,5,6,5,6);
+             SELECT id FROM sp WHERE x0<2 AND y0<2;"                # -> 1
+
+# generated column + CHECK constraint + integrity check
+$S :memory: "CREATE TABLE t(a INT, b INT GENERATED ALWAYS AS (a*2), CHECK(a>0));
+             INSERT INTO t(a) VALUES(3); SELECT a,b FROM t; PRAGMA integrity_check;"
+                                                                 # -> 3|6 / ok
+
+# transaction rollback
+$S :memory: "CREATE TABLE t(x); INSERT INTO t VALUES(1);
+             BEGIN; INSERT INTO t VALUES(2); ROLLBACK;
+             SELECT count(*) FROM t;"                              # -> 1
+```
+
+To prove a result is **correct** (not just self-consistent), run the same query
+through the pure-C amalgamation and diff — see
+[docs/testing.md](docs/testing.md):
+
+```bash
+zig build -Damalgamation=true && zig-out/bin/sqlite3 :memory: "<query>"   # oracle
+```
+
 ## Examples & sample data
 
 ### Sample/seed database
