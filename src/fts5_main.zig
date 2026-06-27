@@ -232,7 +232,8 @@ const XTokenCb = ?*const fn (?*anyopaque, c_int, ?[*]const u8, c_int, c_int, c_i
 // sibling section: fts5_buffer.c
 // ---------------------------------------------------------------------------
 extern fn sqlite3Fts5BufferAppendVarint(pRc: *c_int, pBuf: *Fts5Buffer, iVal: i64) callconv(.c) void;
-extern fn sqlite3Fts5BufferAppendBlob(pRc: *c_int, pBuf: *Fts5Buffer, nData: u32, pData: [*]const u8) callconv(.c) void;
+// pData may be null when nData==0 (an empty poslist); C no-ops in that case.
+extern fn sqlite3Fts5BufferAppendBlob(pRc: *c_int, pBuf: *Fts5Buffer, nData: u32, pData: ?[*]const u8) callconv(.c) void;
 extern fn sqlite3Fts5Mprintf(pRc: *c_int, zFmt: [*:0]const u8, ...) callconv(.c) ?[*:0]u8;
 extern fn sqlite3Fts5MallocZero(pRc: *c_int, nByte: i64) callconv(.c) ?*anyopaque;
 extern fn sqlite3Fts5GetVarint32(p: [*]const u8, v: *u32) callconv(.c) c_int;
@@ -2436,7 +2437,7 @@ fn fts5PoslistBlob(pCtx: ?*sqlite3_context, pCsr: *Fts5Cursor) c_int {
             while (i < nPhrase) : (i += 1) {
                 var pPoslist: ?[*]const u8 = null;
                 const nPoslist = sqlite3Fts5ExprPoslist(pCsr.pExpr, i, &pPoslist);
-                sqlite3Fts5BufferAppendBlob(&rc, &val, @bitCast(nPoslist), pPoslist.?);
+                sqlite3Fts5BufferAppendBlob(&rc, &val, @bitCast(nPoslist), pPoslist);
             }
         },
         FTS5_DETAIL_COLUMNS => {
@@ -2452,7 +2453,7 @@ fn fts5PoslistBlob(pCtx: ?*sqlite3_context, pCsr: *Fts5Cursor) c_int {
                 var pPoslist: ?[*]const u8 = null;
                 var nPoslist: c_int = undefined;
                 rc = sqlite3Fts5ExprPhraseCollist(pCsr.pExpr, i, &pPoslist, &nPoslist);
-                sqlite3Fts5BufferAppendBlob(&rc, &val, @bitCast(nPoslist), pPoslist.?);
+                sqlite3Fts5BufferAppendBlob(&rc, &val, @bitCast(nPoslist), pPoslist);
             }
         },
         else => {},

@@ -870,7 +870,10 @@ const c = struct {
     extern fn sqlite3TableLock(pParse: Ptr, iDb: c_int, tnum: c_int, isWriteLock: u8, zName: ?[*:0]const u8) void;
     extern fn sqlite3OpenTable(pParse: Ptr, iCur: c_int, iDb: c_int, pTab: Ptr, opcode: c_int) void;
     extern fn sqlite3PrimaryKeyIndex(pTab: Ptr) Ptr;
-    extern fn sqlite3TableColumnToStorage(pTab: Ptr, iCol: i16) c_int;
+    // Returns i16 in C — declaring c_int here would read undefined upper bits of
+    // the return register (x86-64 leaves them unspecified for a 16-bit return),
+    // turning a -1 rowid result into 65535 and corrupting trigger OP_Param p1.
+    extern fn sqlite3TableColumnToStorage(pTab: Ptr, iCol: i16) i16;
     extern fn sqlite3TableColumnToIndex(pIdx: Ptr, iCol: i16) c_int;
     // keyinfo
     extern fn sqlite3KeyInfoAlloc(db: Ptr, n1: c_int, n2: c_int) Ptr;
@@ -4042,7 +4045,7 @@ export fn sqlite3ExprCodeTarget(pParse: Ptr, pExpr0: Ptr, target: c_int) c_int {
             TK_TRIGGER => {
                 const pTab = exprYTab(pExpr);
                 const iCol = exprIColumn(pExpr);
-                const p1 = exprITable(pExpr) * (rd(i16, pTab, Table_nCol) + 1) + 1 + c.sqlite3TableColumnToStorage(pTab, @intCast(iCol));
+                const p1 = exprITable(pExpr) * (rd(i16, pTab, Table_nCol) + 1) + 1 + @as(c_int, c.sqlite3TableColumnToStorage(pTab, @intCast(iCol)));
                 _ = c.sqlite3VdbeAddOp2(v, op.Param, p1, target);
                 if (iCol >= 0 and colAffinity(rdpCol(pTab, iCol)) == SQLITE_AFF_REAL) {
                     _ = c.sqlite3VdbeAddOp1(v, op.RealAffinity, target);
@@ -4130,7 +4133,7 @@ fn codeColumn(pParse: Ptr, pExpr: Ptr, target: c_int, v: Ptr, pr1: *c_int) c_int
                 return -1 - parseISelfTab(pParse);
             }
             const pCol = rdpCol(pTab, iCol);
-            const iSrc = c.sqlite3TableColumnToStorage(pTab, @intCast(iCol)) - parseISelfTab(pParse);
+            const iSrc = @as(c_int, c.sqlite3TableColumnToStorage(pTab, @intCast(iCol))) - parseISelfTab(pParse);
             if ((colFlags(pCol) & COLFLAG_GENERATED) != 0) {
                 if ((colFlags(pCol) & COLFLAG_BUSY) != 0) {
                     c.sqlite3ErrorMsg(pParse, "generated column loop on \"%s\"", colCnName(pCol));

@@ -2123,7 +2123,11 @@ fn allocateIndexInfo(pWInfo: Ptr, pWC: Ptr, mUnusable: Bitmask, pSrc: Ptr, pmNoO
                         wr(u8, pc, IC_op, SQLITE_INDEX_CONSTRAINT_IS);
                     }
                 } else {
-                    wr(u8, pc, IC_op, @intCast(op));
+                    // C: `pIdxCons[j].op = (u8)op;` — a *truncating* cast (the low
+                    // byte carries the WO_*/SQLITE_INDEX_CONSTRAINT_* code). Use
+                    // @truncate, not @intCast: an aux-function constraint can leave
+                    // high bits set in `op`, which @intCast would panic on.
+                    wr(u8, pc, IC_op, @truncate(op));
                     if ((op & (WO_LT | WO_LE | WO_GT | WO_GE)) != 0 and
                         c.sqlite3ExprIsVector(exprRight(wtExpr(pTerm))) != 0)
                     {

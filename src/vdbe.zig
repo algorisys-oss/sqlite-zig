@@ -4273,7 +4273,10 @@ pub export fn sqlite3VdbeExec(p: ?*Vdbe) callconv(.c) c_int {
         done = true;
     } else {
         wr(c_int, p, Vdbe_rc, SQLITE_OK);
-        wr(c_int, p, Vdbe_iCurrentTime, 0);
+        // iCurrentTime is sqlite3_int64 — zero all 8 bytes. Writing it as c_int
+        // left the high 4 bytes set after the first datetime('now') cached a
+        // full i64, so the per-statement time cache never reset (drifting clock).
+        wr(i64, p, Vdbe_iCurrentTime, 0);
         wr(c_int, db, sqlite3_busyHandler_nBusy, 0);
         if (isInterrupted(db)) {
             exitKind = .abort_interrupt;
