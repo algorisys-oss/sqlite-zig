@@ -176,7 +176,7 @@ fn fts5VocabTableType(zType: [*:0]const u8, pzErr: *?[*:0]u8, peType: *c_int) c_
         } else if (sqlite3_stricmp(z, "instance") == 0) {
             peType.* = FTS5_VOCAB_INSTANCE;
         } else {
-            pzErr.* = sqlite3_mprintf("fts5vocab: unknown table type: %%Q", z);
+            pzErr.* = sqlite3_mprintf("fts5vocab: unknown table type: %Q", z);
             rc = SQLITE_ERROR;
         }
         sqlite3_free(z);
@@ -353,7 +353,7 @@ fn fts5VocabOpenMethod(pVTab: *sqlite3_vtab, ppCsr: *?*sqlite3_vtab_cursor) call
 
     if (pTab.bBusy != 0) {
         pVTab.zErrMsg = sqlite3_mprintf(
-            "recursive definition for %%s.%%s",
+            "recursive definition for %s.%s",
             pTab.zFts5Db,
             pTab.zFts5Tbl,
         );
@@ -361,7 +361,7 @@ fn fts5VocabOpenMethod(pVTab: *sqlite3_vtab, ppCsr: *?*sqlite3_vtab_cursor) call
     }
     zSql = sqlite3Fts5Mprintf(
         &rc,
-        "SELECT t.%%Q FROM %%Q.%%Q AS t WHERE t.%%Q MATCH '*id'",
+        "SELECT t.%Q FROM %Q.%Q AS t WHERE t.%Q MATCH '*id'",
         pTab.zFts5Tbl,
         pTab.zFts5Db,
         pTab.zFts5Tbl,
@@ -387,7 +387,7 @@ fn fts5VocabOpenMethod(pVTab: *sqlite3_vtab, ppCsr: *?*sqlite3_vtab_cursor) call
             pStmt = null;
             if (rc == SQLITE_OK) {
                 pVTab.zErrMsg = sqlite3_mprintf(
-                    "no such fts5 table: %%s.%%s",
+                    "no such fts5 table: %s.%s",
                     pTab.zFts5Db,
                     pTab.zFts5Tbl,
                 );

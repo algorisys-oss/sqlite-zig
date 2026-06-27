@@ -141,6 +141,7 @@ const ported_modules = [_][]const u8{
     "treeview.c", // -> src/treeview.zig (DEBUG-only AST/plan tree printing)
     "rtree.c", // -> src/rtree.zig (R*Tree + geopoly virtual tables)
     "sqlite3session.c", // -> src/sqlite3session.zig (session/changeset/changegroup/rebaser)
+    "fts5.c", // -> src/fts5.zig (FTS5 amalgamation: foundation + per-section sub-files)
 };
 
 pub fn build(b: *std.Build) void {

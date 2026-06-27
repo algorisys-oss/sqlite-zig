@@ -48,15 +48,15 @@
 comptime {
     _ = @import("fts5_varint.zig");
     _ = @import("fts5_buffer.zig");
-    // As each remaining section lands, add it here:
-    // _ = @import("fts5_hash.zig");
-    // _ = @import("fts5_unicode2.zig");
-    // _ = @import("fts5_tokenize.zig");
-    // _ = @import("fts5_config.zig");
-    // _ = @import("fts5_aux.zig");
-    // _ = @import("fts5_vocab.zig");
-    // _ = @import("fts5_expr.zig");
-    // _ = @import("fts5_index.zig");
-    // _ = @import("fts5_storage.zig");
-    // _ = @import("fts5_main.zig");
+    _ = @import("fts5_hash.zig");
+    _ = @import("fts5_unicode2.zig");
+    _ = @import("fts5_tokenize.zig");
+    _ = @import("fts5_config.zig");
+    _ = @import("fts5_aux.zig");
+    _ = @import("fts5_vocab.zig");
+    _ = @import("fts5parse.zig");
+    _ = @import("fts5_expr.zig");
+    _ = @import("fts5_index.zig");
+    _ = @import("fts5_storage.zig");
+    _ = @import("fts5_main.zig");
 }

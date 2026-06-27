@@ -612,7 +612,7 @@ extern fn sqlite3Fts5BufferAppendString(pRc: *c_int, pBuf: *Fts5Buffer, zStr: [*
 extern fn sqlite3Fts5BufferAppendPrintf(pRc: *c_int, pBuf: *Fts5Buffer, zFmt: [*:0]const u8, ...) callconv(.c) void;
 extern fn sqlite3Fts5BufferFree(pBuf: *Fts5Buffer) callconv(.c) void;
 extern fn sqlite3Fts5BufferZero(pBuf: *Fts5Buffer) callconv(.c) void;
-extern fn sqlite3Fts5BufferSet(pRc: *c_int, pBuf: *Fts5Buffer, nData: c_int, pData: [*]const u8) callconv(.c) void;
+extern fn sqlite3Fts5BufferSet(pRc: *c_int, pBuf: *Fts5Buffer, nData: c_int, pData: ?[*]const u8) callconv(.c) void;
 extern fn sqlite3Fts5Put32(aBuf: [*]u8, iVal: c_int) callconv(.c) void;
 extern fn sqlite3Fts5Get32(aBuf: [*]const u8) callconv(.c) c_int;
 extern fn sqlite3Fts5MallocZero(pRc: *c_int, nByte: i64) callconv(.c) ?*anyopaque;
@@ -7315,7 +7315,7 @@ fn fts5TestTerm(
         }
 
         cksum3 ^= ck1;
-        sqlite3Fts5BufferSet(&rc, pPrev, n, z.?);
+        sqlite3Fts5BufferSet(&rc, pPrev, n, z);
 
         if (rc == SQLITE_OK and cksum3 != expected) {
             pbFail.* = 1;
