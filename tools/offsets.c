@@ -635,5 +635,17 @@ int main(void) {
     P(Sqlite3Config, szPma);
     P(Sqlite3Config, bSmallMalloc);
 
+    /* pragma.c */
+    P(sqlite3, temp_store);
+    P(sqlite3, szMmap);
+    P(sqlite3, nAnalysisLimit);
+    P(sqlite3, busyTimeout);
+    P(Db, bSyncSet);
+    P(FuncDef, xFinalize);
+    P(FuncDef, xValue);
+    P(FuncDef, nArg);
+    P(Module, zName);
+    P(Sqlite3Config, szMmap);
+
     return 0;
 }

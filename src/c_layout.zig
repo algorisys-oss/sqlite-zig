@@ -537,6 +537,16 @@ const prod = struct {
     pub const sqlite3_nSpill: usize = 808;
     pub const Sqlite3Config_szPma: usize = 336;
     pub const Sqlite3Config_bSmallMalloc: usize = 8;
+    pub const sqlite3_temp_store: usize = 102;
+    pub const sqlite3_szMmap: usize = 64;
+    pub const sqlite3_nAnalysisLimit: usize = 760;
+    pub const sqlite3_busyTimeout: usize = 764;
+    pub const Db_bSyncSet: usize = 17;
+    pub const FuncDef_xFinalize: usize = 32;
+    pub const FuncDef_xValue: usize = 40;
+    pub const FuncDef_nArg: usize = 0;
+    pub const Module_zName: usize = 8;
+    pub const Sqlite3Config_szMmap: usize = 296;
 };
 
 /// --dev testfixture config (SQLITE_DEBUG + SQLITE_TEST).
@@ -1069,6 +1079,16 @@ const tf = struct {
     pub const sqlite3_nSpill: usize = 808;
     pub const Sqlite3Config_szPma: usize = 336;
     pub const Sqlite3Config_bSmallMalloc: usize = 8;
+    pub const sqlite3_temp_store: usize = 102;
+    pub const sqlite3_szMmap: usize = 64;
+    pub const sqlite3_nAnalysisLimit: usize = 760;
+    pub const sqlite3_busyTimeout: usize = 764;
+    pub const Db_bSyncSet: usize = 17;
+    pub const FuncDef_xFinalize: usize = 32;
+    pub const FuncDef_xValue: usize = 40;
+    pub const FuncDef_nArg: usize = 0;
+    pub const Module_zName: usize = 8;
+    pub const Sqlite3Config_szMmap: usize = 296;
 };
 
 /// The layout namespace matching the current build.

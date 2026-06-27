@@ -110,6 +110,7 @@ const ported_modules = [_][]const u8{
     "tokenize.c", // -> src/tokenize.zig (SQL tokenizer + keyword hash + parser driver)
     "alter.c", // -> src/alter.zig (ALTER TABLE: rename/add/drop column, rename table)
     "vdbesort.c", // -> src/vdbesort.zig (external merge sorter for ORDER BY/GROUP BY)
+    "pragma.c", // -> src/pragma.zig (PRAGMA statements + pragma_ vtab)
     "resolve.c", // -> src/resolve.zig (name resolution)
     "vdbe.c", // -> src/vdbe.zig (bytecode interpreter: sqlite3VdbeExec dispatch loop)
     "func.c", // -> src/func.zig (built-in SQL scalar/aggregate functions)
