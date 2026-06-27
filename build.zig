@@ -71,6 +71,7 @@ const ported_modules = [_][]const u8{
     "fts3_unicode2.c", // -> src/fts3_unicode2.zig (Unicode fold/category data)
     "threads.c", // -> src/threads.zig (pthreads worker-thread helper)
     "mutex_noop.c", // -> src/mutex_noop.zig (no-op / debug-checking mutex)
+    "mutex_unix.c", // -> src/mutex_unix.zig (pthreads mutex backend)
     "mem5.c", // -> src/mem5.zig (MEMSYS5 buddy allocator)
     "stmt.c", // -> src/stmt.zig (sqlite_stmt eponymous virtual table)
     "mutex.c", // -> src/mutex.zig (mutex dispatch layer)
