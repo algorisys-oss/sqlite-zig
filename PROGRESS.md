@@ -78,11 +78,7 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
 
 ### Known issues
 
-- **Two benign over-sized literals in build.zig** (found by the offset audit;
-  not corruption, just waste): `sizeof_Index` fallback = 120 (real 112, build.zig:3330)
-  over-allocates 8 bytes/index; `sizeof_sqlite3_str` = 48 (real 32, build.zig:4293)
-  over-sizes a stack StrAccum. Both self-consistent. To fold into the next
-  build.zig edit. (analyze.zig already uses the correct 112.)
+None currently open.
 
 **Fixed (view/op-array corruption + EXPLAIN-reprepare regression):**
 
