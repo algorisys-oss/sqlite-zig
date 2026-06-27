@@ -4,7 +4,28 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 71 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 75 modules; the ENTIRE SQL COMPILER is now Zig
+
+**Modules 72–75: the SQL query-processing quintet completed** (expr was #71):
+`whereexpr.c`, `wherecode.c`, `where.c`, `select.c` →
+`src/{whereexpr,wherecode,where,select}.zig`. Drafted by parallel agents,
+integrated + validated one at a time atop a C base.
+- `whereexpr.c` (72) — WHERE→WhereTerm analysis, LIKE/GLOB/OR optimization.
+  Fixes: exprIColumn i16-read, sqlite3StrBINARY char-array, Toupper/Tolower macros.
+- `wherecode.c` (73) — WHERE-loop VDBE codegen (seeks/scans/OR/joins/vtab/RJ).
+  Fix: sqlite3VdbeScanStatus no-op (SCANSTATUS off).
+- `where.c` (75) — the cost-based optimizer/planner. Agent self-validated
+  (20/20 + EXPLAIN QUERY PLAN byte-identical to C) and pre-fixed iColumn/StrBINARY
+  → integrated with ZERO additional fixes. 148 new whereInt.h offsets.
+- `select.c` (74) — SELECT codegen (GROUP BY/HAVING/DISTINCT/compounds/subquery
+  co-routines+materialization/recursive CTEs). Fixes: constInsert null-ptr guard;
+  4 macros inline; **SQLITE_DYNAMIC** is &sqlite3RowSetClear not 1 (corrupted every
+  aggregate's colName Mem); **TF_Ephemeral** is 0x4000 not 0x2 (materialized CTEs
+  opened as real tables → -32768 transient-iDb segfault).
+Now Zig end-to-end: tokenize → resolve → expr/where*/select codegen → VDBE →
+btree → pager. Validated: zig build test GREEN; broad smoke correct across
+aggregates, all compound selects, subqueries, views, joins, window funcs,
+recursive CTEs, index selection, EXPLAIN QUERY PLAN.
 
 **71st module: `expr.c` → `src/expr.zig` — expression code generation** (~5400
 lines, 112 exports): affinity/collation, sqlite3Expr* construction & dup,
