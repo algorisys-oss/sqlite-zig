@@ -4,7 +4,16 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 63 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 64 modules ported, incl. the full VDBE interpreter
+
+**64th module: `pragma.c` → `src/pragma.zig` — PRAGMA statements + the
+eponymous `pragma_*` virtual table. The giant `sqlite3Pragma()` dispatcher plus
+`sqlite3GetBoolean`, `sqlite3JournalModename`, `sqlite3PragmaVtabRegister`. The
+`aPragmaName[]`/`pragCName[]` tables are config-divergent (66 prod / 75 --dev,
+9 SQLITE_DEBUG-only pragmas) — both built, selected via `config.sqlite_debug`.
+Bitfield byte reads (Column.notNull/eCType, Index.idxType/hasStat1, Parse
+okConstFactor) probed and config-invariant. Validated `--zig`: pragma 0/236,
+pragma2 0/27, pragma3 0/29, pragma4 0/108 — 0 errors out of 400.**
 
 **63rd module: `vdbesort.c` → `src/vdbesort.zig` — the external merge sorter
 (ORDER BY / GROUP BY / CREATE INDEX): in-memory sort, PMA spill-to-disk,
