@@ -675,6 +675,67 @@ int main(void) {
     printf("Sqlite3Config_m_xShutdown %zu\n", offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xShutdown));
     printf("Sqlite3Config_m_pAppData %zu\n",  offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, pAppData));
 
+    /* main.c — connection control surface */
+    P(sqlite3, lastRowid);
+    P(sqlite3, pSavepoint);
+    P(sqlite3, isTransactionSavepoint);
+    P(sqlite3, nFpDigit);
+    P(sqlite3, pDbData);
+    P(sqlite3, pCommitArg);
+    P(sqlite3, xCommitCallback);
+    P(sqlite3, pRollbackArg);
+    P(sqlite3, xRollbackCallback);
+    P(sqlite3, pUpdateArg);
+    P(sqlite3, xUpdateCallback);
+    P(sqlite3, pAutovacPagesArg);
+    P(sqlite3, xAutovacDestr);
+    P(sqlite3, xAutovacPages);
+    P(sqlite3, pPreUpdateArg);
+    P(BusyHandler, xBusyHandler);
+    P(BusyHandler, pBusyArg);
+    P(BusyHandler, nBusy);
+    P(CollSeq, enc);
+    P(CollSeq, pUser);
+    P(CollSeq, xCmp);
+    P(CollSeq, xDel);
+    SZ(CollSeq, CollSeq);
+    P(DbClientData, pNext);
+    P(DbClientData, pData);
+    P(DbClientData, xDestructor);
+    P(DbClientData, zName);
+    P(FuncDef, pNext);
+    P(FuncDef, u);
+    P(FuncDef, xInverse);
+    P(FuncDestructor, nRef);
+    P(FuncDestructor, pUserData);
+    P(FuncDestructor, xDestroy);
+    P(Savepoint, pNext);
+    P(Sqlite3Config, bFullMutex);
+#ifdef SQLITE_DEBUG
+    P(Sqlite3Config, bJsonSelfcheck);
+#endif
+    P(Sqlite3Config, bLocaltimeFault);
+    P(Sqlite3Config, bOpenUri);
+    P(Sqlite3Config, bUseCis);
+    P(Sqlite3Config, inProgress);
+    P(Sqlite3Config, iOnceResetThreshold);
+    P(Sqlite3Config, isInit);
+    P(Sqlite3Config, isMallocInit);
+    P(Sqlite3Config, isMutexInit);
+    P(Sqlite3Config, isPCacheInit);
+    P(Sqlite3Config, m);
+    P(Sqlite3Config, mxMmap);
+    P(Sqlite3Config, neverCorrupt);
+    P(Sqlite3Config, nLookaside);
+    P(Sqlite3Config, nRefInitMutex);
+    P(Sqlite3Config, pInitMutex);
+    P(Sqlite3Config, sharedCacheEnabled);
+    P(Sqlite3Config, szLookaside);
+    P(Sqlite3Config, xAltLocaltime);
+    SZ(mem_methods, sqlite3_mem_methods);
+    SZ(mutex_methods, sqlite3_mutex_methods);
+    SZ(pcache_methods2, sqlite3_pcache_methods2);
+
     /* where.c — the WHERE optimizer (whereInt.h; config-divergent under DEBUG). */
     P(WhereInfo, savedNQueryLoop);
     P(WhereInfo, pOrderBy);

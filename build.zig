@@ -77,6 +77,7 @@ const ported_modules = [_][]const u8{
     "mutex.c", // -> src/mutex.zig (mutex dispatch layer)
     "vdbetrace.c", // -> src/vdbetrace.zig (sqlite3VdbeExpandSql for tracing)
     "legacy.c", // -> src/legacy.zig (sqlite3_exec)
+    "main.c", // -> src/main.zig (library/connection control: open/close/config/errors/hooks)
     "pcache.c", // -> src/pcache.zig (page-cache dispatch + dirty-list mgmt)
     "pcache1.c", // -> src/pcache1.zig (default page-cache implementation)
     "printf.c", // -> src/printf.zig (xprintf / sqlite3_str formatting engine)
