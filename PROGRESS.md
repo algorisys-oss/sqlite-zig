@@ -4,9 +4,15 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 61 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 62 modules ported, incl. the full VDBE interpreter
 
-**Latest (61st module): `tokenize.c` → `src/tokenize.zig` — the SQL tokenizer,
+**62nd module: `alter.c` → `src/alter.zig` — ALTER TABLE (RENAME TABLE / ADD /
+DROP / RENAME COLUMN, ADD/DROP CONSTRAINT, the rename-token walkers + 9 internal
+SQL functions). Validated `--zig`: altercol 258, altertab 138, alterdropcol 103
+(0 errors); the one alter-20.3 failure is a pre-existing STRICT-table bug (see
+Known issues). Drafted by a background agent, reviewed/integrated against HEAD.**
+
+**61st module: `tokenize.c` → `src/tokenize.zig` — the SQL tokenizer,
 the keywordhash.h keyword tables, and the Lemon-parser driver
 (`sqlite3GetToken`/`sqlite3RunParser`/`sqlite3KeywordCode`/`sqlite3_keyword_*`).
 Keyword tables verified byte-for-byte; validated via `tcltest --zig` tokenize
@@ -78,7 +84,16 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
 
 ### Known issues
 
-None currently open.
+- **STRICT tables don't reject type-mismatched values** (correctness;
+  pre-existing, unrelated to ALTER — surfaced by `alter-20.3`). E.g.
+  `CREATE TABLE t(a INT, b TEXT) STRICT; INSERT INTO t VALUES(1, x'313233')`
+  wrongly succeeds (stores a BLOB in a TEXT STRICT column) instead of erroring
+  "cannot store BLOB value in TEXT column". Reproduces with no ALTER involved
+  and with C `alter.c` linked, so it's in the STRICT-enforcement INSERT/UPDATE
+  type-check codegen (insert.zig / the OP_HaltIfNull / column-affinity check
+  path), not alter. Only `alter` (1/123) fails because of it; all other
+  alter*/altercol/altertab/alterdropcol/altercons suites are 0 errors under
+  `--zig`.
 
 **Fixed (view/op-array corruption + EXPLAIN-reprepare regression):**
 
