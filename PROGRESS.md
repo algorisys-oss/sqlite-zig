@@ -4,7 +4,35 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 75 modules; the ENTIRE SQL COMPILER is now Zig
+## Current status: Phase 1 — 81 modules; the ENTIRE ACTIVE LINUX CORE is now Zig
+
+**Modules 76–81 (this batch) complete the core engine:**
+- `mutex_unix.c` (76) — pthreads mutex backend (every mutex op).
+- `main.c` (77) — connection control surface (open/close/config/errors/all hooks/
+  create_function/collation; 100 exports; variadic config via @cVaArg).
+- `ctime.c` (78) — compile-option list (comptime 56 prod / 59 tf; was deferred,
+  resolved by C-probing both flag sets).
+- `global.c` (79) — THE KEYSTONE: sqlite3Config instance (byte-exact 440/488) +
+  CtypeMap/UpperToLower/OpcodeProperty tables (byte-verified) + all global data.
+  Was deferred ("every offset depends on it"); resolved by byte-diffing vs C.
+- `treeview.c` (80) — DEBUG-only AST printing (0 symbols prod / 31 tf).
+- `os_unix.c` (81) — the Unix VFS: ALL file I/O, POSIX locking, WAL shm, mmap,
+  the aSyscall fault table, 4 registered VFSes. Agent self-validated (WAL+
+  checkpoint, rollback journal, mmap, 20k external sort, cross-process locking).
+
+Every layer is now Zig on Linux: global config + ctype tables → os_unix VFS →
+pager/wal → btree → vdbe → tokenize/resolve → expr/where*/select codegen →
+func/json/window → main/legacy/prepare API → pragma/alter/analyze/vacuum/etc.
+What remains is NOT core: optional extensions (fts3*/fts5/rtree/icu/session/rbu),
+other-platform files (os_win/mutex_w32), flag-inactive stubs (mem0/2/3/notify/
+os_kv), and generated files never hand-ported (parse.c/opcodes.c).
+
+Recurring integration bug classes (caught across all big ports via gdb/EXPLAIN-
+diff): wrong hardcoded constants (P4_/SRT_/SF_/TF_/SQLITE_DYNAMIC/WO_), C `int`/
+`i16` fields read at the wrong width, char[]-symbol address-is-data, inline-array-
+vs-pointer, struct bitfield bit positions, and C macros declared as extern fns.
+
+## Earlier status: 75 modules; the ENTIRE SQL COMPILER is now Zig
 
 **Modules 72–75: the SQL query-processing quintet completed** (expr was #71):
 `whereexpr.c`, `wherecode.c`, `where.c`, `select.c` →
