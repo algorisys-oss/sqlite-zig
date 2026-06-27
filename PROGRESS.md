@@ -4,7 +4,42 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 64 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 69 modules ported, incl. the full VDBE interpreter
+
+**Modules 65–69 (batch): `status.c`, `btmutex.c`, `dbpage.c`, `dbstat.c`,
+`memdb.c` → `src/{status,btmutex,dbpage,dbstat,memdb}.zig`.** Drafted by parallel
+sub-agents, integrated against HEAD.
+- `status.c` — sqlite3_status / sqlite3_db_status counters (reads sqlite3
+  lookaside + Hash internals via ground-truth offsets).
+- `btmutex.c` — btree-subsystem mutex (Enter/Leave/EnterAll/EnterCursor);
+  Holds*/SchemaMutexHeld `@export`-gated on `config.sqlite_debug`.
+- `dbpage.c` — `sqlite_dbpage` vtab (raw page read/write). **--zig validated:
+  dbpage 0/34.**
+- `dbstat.c` — `dbstat` vtab (per-page btree storage stats; byte-exact page
+  parsing).
+- `memdb.c` — in-memory VFS + sqlite3_serialize/deserialize.
+`notify.c` evaluated and **skipped**: `SQLITE_ENABLE_UNLOCK_NOTIFY` is OFF →
+preprocesses to zero symbols, nothing to swap.
+
+While validating, fixed a **pre-existing crash** in `build.zig`
+`sqlite3FinishCoding` (commit 73f8cbc): OP_Transaction read `Schema.schema_cookie`
+/`iGeneration` (C `int`) as `u32`+`@intCast`, panicking on high-bit-set cookies
+(reachable via PRAGMA schema_version on a deserialized db). Now reads `c_int`
+sign-preserving. Repro `memdb1-710`: was a hard crash, now 0/38.
+
+### ⚠ Testfixture --zig swap limitation (discovered this session)
+`tools/tcltest.sh --zig` swaps a module only if upstream's `make testfixture`
+link command compiles `$UPSTREAM/src/<m>.c` as a **standalone** object (verified
+via `build/gen/relink_zig.sh`). Modules that live only inside `libsqlite3.a`
+(e.g. `status`, `btmutex`, `memdb`, and the earlier `vdbesort`) are **not**
+reachable by the textual swap, so `--zig` runs their **C** version — a passing
+`--zig` line for those does NOT prove the Zig port. Swappable this batch:
+`dbpage`, `dbstat`, `pragma`, `build` (and most front-end modules). For the
+non-swappable ones, the **main `zig build`** is the real validator: `build.zig`
+`ported_modules` drops the C TU and links `src/<m>.zig`, so a clean link (no
+duplicate-symbol error) + green `zig build test` + smoke tests confirm the Zig
+code is the one running. TODO: extend the harness to also rebuild the static lib
+from swapped objects so library-core modules get true `--zig` coverage.
 
 **64th module: `pragma.c` → `src/pragma.zig` — PRAGMA statements + the
 eponymous `pragma_*` virtual table. The giant `sqlite3Pragma()` dispatcher plus
