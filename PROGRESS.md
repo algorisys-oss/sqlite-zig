@@ -33,6 +33,28 @@ This was the LAST active port. 90/105: everything active is Zig. The other 15 fi
 are non-portable (generated parse.c/opcodes.c, Windows os_win/mutex_w32, flag-inactive
 mem0/2/3/notify/os_kv/icu/fts3_icu/rbu, TCL harness).
 
+### Post-FTS5: 4 more engine bugs fixed (surfaced by the blog CRUD example)
+
+Building examples/blog_crud.zig (interactive CRUD over sampledata/blog.db; `zig
+build example`) exercised paths the regression battery missed and exposed four
+real bugs — each reproduced against the ported engine, verified fixed vs the C
+amalgamation, `zig build test` + `zig build sample` green:
+
+1. where.zig allocateIndexInfo: `@intCast(op)` → `@truncate(op)` (C does a
+   truncating (u8) cast). FTS5 aux-function constraint (snippet/highlight in
+   WHERE…MATCH) left high bits in op → panic.
+2. vdbe.zig exec prologue: zeroed iCurrentTime (sqlite3_int64) as c_int, so the
+   per-statement time cache kept stale high bits → datetime('now') drifted on
+   the 2nd+ call. Zero all 8 bytes.
+3. expr.zig TK_TRIGGER: sqlite3TableColumnToStorage extern declared c_int but
+   returns i16; undefined upper return-register bits turned the -1 rowid result
+   into 65535 → OP_Param p1 wrong (65539 vs 3) → NEW.rowid/NEW.<IPK> in a
+   trigger segfaulted. Declare i16. (This is the long-noted rowid-alias bug.)
+4. fts5_main.zig fts5PoslistBlob: `pPoslist.?` force-unwrap crashed on an empty
+   poslist (null/0) under `ORDER BY rank` on external-content FTS5. Accept null.
+
+Note: bug 1's earlier @intCast *panic* had been masking bugs 3/4 on this path.
+
 ## Earlier status: 89 modules; core + rtree + session + FTS3 (complete) in Zig
 
 **Modules 87–89 complete the FTS3 family** — full-text search is now 100% Zig:

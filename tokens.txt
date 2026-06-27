@@ -93,3 +93,7 @@
 # fix + fts5LeafSeek goto fix + differential verification + doc updates) is the
 # in-progress turn and is not yet self-countable — capture its tail next session.
 # Milestone: FTS5 now byte-identical to upstream C; ALL active modules are Zig.
+# Same turn also fixed 4 more engine bugs surfaced by a new interactive CRUD
+# example (examples/blog_crud.zig): where.zig @truncate, vdbe.zig iCurrentTime
+# i64, expr.zig ColumnToStorage i16 ABI (trigger NEW.rowid), fts5_main poslist
+# null. Added `zig build example`; README documents the sqlite-zig executable.
