@@ -120,6 +120,7 @@ const ported_modules = [_][]const u8{
     "expr.c", // -> src/expr.zig (expression code generation)
     "whereexpr.c", // -> src/whereexpr.zig (WHERE-clause analysis into WhereTerms)
     "wherecode.c", // -> src/wherecode.zig (WHERE-loop VDBE code generation)
+    "where.c", // -> src/where.zig (WHERE-clause query optimizer / planner)
     "select.c", // -> src/select.zig (SELECT statement code generation)
     "resolve.c", // -> src/resolve.zig (name resolution)
     "vdbe.c", // -> src/vdbe.zig (bytecode interpreter: sqlite3VdbeExec dispatch loop)
