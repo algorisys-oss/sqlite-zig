@@ -194,25 +194,25 @@ const Index_nKeyCol = off("Index_nKeyCol", 102);
 const Index_nColumn = off("Index_nColumn", 104);
 const Index_onError = off("Index_onError", 106);
 const Index_colNotIdxed = off("Index_colNotIdxed", 112);
-// Index bitfield bytes: after onError(@106) comes a u16-ish bitfield group at 107.
-// idxType:2,bUnordered:1,uniqNotNull:1,isCovering:1,noSkipScan:1,hasStat1:1,bNoQuery:1 @107
-//   bHasVCol:1,bHasExpr:1,bAscKeyBug:1,bHasDelete:1,bLowQual:1 @108
-const Index_bits_byte: usize = Index_onError + 1; // 107
+// Index bitfield bytes (empirically probed, identical prod/testfixture — see
+// tools/bitprobe). After onError comes the packed bit group:
+//   byte onError+1: idxType:2(0x03), bUnordered:1(0x04), uniqNotNull:1(0x08),
+//                   isResized:1(0x10), isCovering:1(0x20), noSkipScan:1(0x40),
+//                   hasStat1:1(0x80)
+//   byte onError+2: bNoQuery:1(0x01), bAscKeyBug:1(0x02), bHasVCol:1(0x04),
+//                   bHasExpr:1(0x08)
+const Index_bits_byte: usize = Index_onError + 1;
 const IDX_idxType_mask: u8 = 0x03;
 const IDX_uniqNotNull: u8 = 0x08;
-const IDX_isCovering: u8 = 0x10;
-const Index_bits2_byte: usize = Index_onError + 2; // 108
-const IDX_bHasVCol: u8 = 0x01;
-const IDX_bHasExpr: u8 = 0x02;
-const IDX_bAscKeyBug: u8 = 0x04;
-// isResized / bNoQuery / hasStat1 — within byte 107
-const IDX_noSkipScan: u8 = 0x20;
-const IDX_hasStat1: u8 = 0x40;
-const IDX_bNoQuery: u8 = 0x80;
-// byte 108 also: bHasDelete:1 (0x08), bLowQual:1(0x10)
-// isResized lives in byte 109
-const Index_bits3_byte: usize = Index_onError + 3; // 109
-const IDX_isResized: u8 = 0x01;
+const IDX_isResized: u8 = 0x10;
+const IDX_isCovering: u8 = 0x20;
+const IDX_noSkipScan: u8 = 0x40;
+const IDX_hasStat1: u8 = 0x80;
+const Index_bits2_byte: usize = Index_onError + 2;
+const IDX_bNoQuery: u8 = 0x01;
+const IDX_bAscKeyBug: u8 = 0x02;
+const IDX_bHasVCol: u8 = 0x04;
+const IDX_bHasExpr: u8 = 0x08;
 
 // Token (sizeof 16): z(0), n(8 as u32)
 const Token_z: usize = 0;
@@ -1200,7 +1200,7 @@ export fn sqlite3FreeIndex(db: Cptr, p: Cptr) void {
     sqlite3ExprDelete(db, rdp(p, Index_pPartIdxWhere));
     sqlite3ExprListDelete(db, rdp(p, Index_aColExpr));
     sqlite3DbFree(db, rdp(p, Index_zColAff));
-    if ((base(p)[Index_bits3_byte] & IDX_isResized) != 0) sqlite3DbFree(db, rdp(p, Index_azColl));
+    if ((base(p)[Index_bits_byte] & IDX_isResized) != 0) sqlite3DbFree(db, rdp(p, Index_azColl));
     sqlite3DbFree(db, p);
 }
 
@@ -3103,7 +3103,7 @@ fn resizeIndexObject(pParse: Cptr, pIdx: Cptr, N: c_int) c_int {
     @memmove(zExtra[0..nColumn], @as([*]const u8, @ptrCast(rdp(pIdx, Index_aSortOrder).?))[0..nColumn]);
     wr(?*anyopaque, pIdx, Index_aSortOrder, @ptrCast(zExtra));
     wr(u16, pIdx, Index_nColumn, @intCast(N));
-    base(pIdx)[Index_bits3_byte] |= IDX_isResized;
+    base(pIdx)[Index_bits_byte] |= IDX_isResized;
     return SQLITE_OK;
 }
 
