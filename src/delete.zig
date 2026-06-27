@@ -167,8 +167,9 @@ const Index_nColumn_off: usize = if (@hasDecl(L, "Index_nColumn")) L.Index_nColu
 const Index_onError_off: usize = if (@hasDecl(L, "Index_onError")) L.Index_onError else 98;
 // bitfield byte: idxType:2 bUnordered:1 uniqNotNull:1 ... (byte = onError+1 = 99)
 const Index_idxType_byte: usize = if (@hasDecl(L, "Index_idxType_byte")) L.Index_idxType_byte else 99;
-// bHasExpr is the 12th flag → byte onError+3 = 101, bit 3 → mask 0x08
-const Index_bHasExpr_byte: usize = 101;
+// bHasExpr lives in byte onError+2 (= idxType_byte+1), bit 3 → mask 0x08.
+// (Probed ground truth; the prior onError+3=101 was padding → always read false.)
+const Index_bHasExpr_byte: usize = Index_idxType_byte + 1;
 const Index_bHasExpr_mask: u8 = 0x08;
 
 // Parse
