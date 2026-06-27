@@ -48,10 +48,12 @@ guide). Snapshot by phase:
 - Phase 6 (public API): done — **main.c** (open/close/config/errors/all hooks),
   prepare, legacy, vdbeapi, loadext, table, callback, util.
 - Phase 7 (extensions): **RTree+Geopoly, Session/changeset, FTS3/4 (vtab+writer+
-  parser+snippet+tokenizer) DONE.** **FTS5 IN PROGRESS** — ported as a modular Zig
-  object (foundation src/fts5_int.zig + per-section src/fts5_*.zig, swapping the
-  fts5.c amalgamation; ~26k lines; 11 sections done, fts5_index/storage/main
-  drafting). ICU/RBU are flag-inactive.
+  parser+snippet+tokenizer), and FTS5 DONE.** FTS5 is ported as a modular Zig
+  object (foundation src/fts5_int.zig + 14 per-section src/fts5_*.zig, swapping the
+  ~26k-line fts5.c amalgamation) and now produces BYTE-IDENTICAL %_data to upstream
+  C across a broad differential (insert/delete/update, merge/optimize, MATCH AND/OR/
+  NOT/phrase/prefix/absent-term, bm25/snippet, fts5vocab); integrity_check ok at
+  3k–5k rows. ICU/RBU are flag-inactive. **All active modules are now Zig.**
 
 NOT portable for a Linux engine (no Zig port needed): generated parse.c/opcodes.c,
 Windows os_win/mutex_w32, flag-inactive mem0/2/3/notify/os_kv/icu/fts3_icu/rbu,
@@ -251,7 +253,7 @@ full `testrunner.tcl full` green.
 - [x] `fts3_unicode2.c` (fold data) and `fts3_aux.c` (fts4aux vtab) →
       `src/fts3_unicode2.zig`/`src/fts3_aux.zig` (fts3aux1/2, fts4unicode green).
 - [x] `stmt.c` — the `sqlite_stmt` eponymous vtab → `src/stmt.zig`.
-- [x] RTREE+geopoly, session, FTS3/4 DONE; JSON1 folded in (json.zig); FTS5 in progress; rbu inactive.
+- [x] RTREE+geopoly, session, FTS3/4 DONE; JSON1 folded in (json.zig); FTS5 DONE (src/fts5*.zig, byte-identical differential); rbu inactive.
 - [ ] Windows VFS (`os_win.c`), other platforms
 - [ ] A native Zig API surface (idiomatic, not just the C ABI)
 

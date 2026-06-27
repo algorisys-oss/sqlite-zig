@@ -85,3 +85,11 @@
             this turn's tail.
 
 # Session actual total so far (cumulative): 918,701,119 tokens.
+
+# --- 2026-06-27 continuation (FTS5 completion) -------------------------------
+# This session's transcript (token_usage.py on the current *.jsonl) reports
+# 780,255,959 tokens through the last fully-recorded turn (turn 36, the FTS5
+# multi-page debug-agent notification). The FTS5-completion turn (varint-ABI
+# fix + fts5LeafSeek goto fix + differential verification + doc updates) is the
+# in-progress turn and is not yet self-countable — capture its tail next session.
+# Milestone: FTS5 now byte-identical to upstream C; ALL active modules are Zig.
