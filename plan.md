@@ -27,6 +27,38 @@ Update checkboxes and notes as work lands.
 
 ---
 
+## CURRENT STATUS (2026-06-27) — 89/105 modules; whole engine + RTree/Session/FTS3 in Zig
+
+**The entire active Linux SQLite engine is now Zig**, plus the RTree, Session, and
+FTS3/FTS4 extensions — 89 of 105 build TUs ported, every one committed and
+validated (`zig build test` green). The phase checkboxes below are historical and
+partly stale; **PROGRESS.md is the authoritative live status** (with the resume
+guide). Snapshot by phase:
+- Phase 0 (foundation/harness): done.
+- Phase 1 (leaf utils): done — incl. the deferred keystones **global.c**
+  (sqlite3Config byte-exact) and **ctime.c**.
+- Phase 2 (OS/VFS): done — **os_unix.c** (all file I/O, locking, WAL shm, mmap),
+  os.c, memjournal.c, memdb.c. (os_win/os_kv: other-platform/inactive.)
+- Phase 3 (storage): done — pager, **wal**, btree, backup, all pcache.
+- Phase 4 (VDBE): done — vdbe + vdbeaux/api/mem/sort/trace/blob.
+- Phase 5 (SQL compiler): done — tokenize, resolve, **expr, where/whereexpr/
+  wherecode, select**, build/insert/update/delete, trigger, fkey, alter, analyze,
+  upsert, pragma, vacuum, attach, walker, func, json, window, date. (parse.c is
+  Lemon-generated → stays C, like all generated files.)
+- Phase 6 (public API): done — **main.c** (open/close/config/errors/all hooks),
+  prepare, legacy, vdbeapi, loadext, table, callback, util.
+- Phase 7 (extensions): **RTree+Geopoly, Session/changeset, FTS3/4 (vtab+writer+
+  parser+snippet+tokenizer) DONE.** **FTS5 IN PROGRESS** — ported as a modular Zig
+  object (foundation src/fts5_int.zig + per-section src/fts5_*.zig, swapping the
+  fts5.c amalgamation; ~26k lines; 11 sections done, fts5_index/storage/main
+  drafting). ICU/RBU are flag-inactive.
+
+NOT portable for a Linux engine (no Zig port needed): generated parse.c/opcodes.c,
+Windows os_win/mutex_w32, flag-inactive mem0/2/3/notify/os_kv/icu/fts3_icu/rbu,
+and the tclsqlite-ex test harness.
+
+---
+
 ## Phase 0 — Foundation & harness (no porting yet)
 
 Goal: a Zig-driven build of *unmodified* upstream C that produces a working
@@ -89,7 +121,7 @@ patterns (error handling, allocator strategy, C-ABI shims, test parity).
       `src/mutex_noop.zig`/`src/mutex.zig` (the mutex subsystem is fully Zig;
       reads `sqlite3Config.mutex@/bCoreMutex@`). `threads.c` (pthreads sorter
       helper) also ported. mutex1/mutex2 green. `mutex_unix.c` still C.
-- [ ] `global.c`, `ctime.c` (deferred — global.c defines the sqlite3Config
+- [x] `global.c` (sqlite3Config byte-exact), `ctime.c` — DONE (were deferred:
       struct every c_layout offset depends on; ctime.c's option list diverges by
       many flags. Do after expanding the `config` options module.)
 - [x] `complete.c` — `sqlite3_complete()` SQL tokenizer → `src/complete.zig`.
@@ -111,13 +143,13 @@ The interface to the host. Port the Unix path first; defer Windows.
       fault-injection state (`sqlite3_io_error_*`, `DO_OS_MALLOC_TEST`) gated on
       `config.sqlite_test`. Validated: ioerr (10885), pager1 (1373), lock,
       mmap1, oserror in the testfixture config.
-- [ ] `os_unix.c` (file I/O, locking, mmap) — large, ~296 KB
+- [x] `os_unix.c` (file I/O, locking, WAL shm, mmap) → `src/os_unix.zig`.
 - [x] `memjournal.c` — in-memory rollback journal → `src/memjournal.zig`.
       Config-invariant: own opaque structs + the public `sqlite3_file`/
       `sqlite3_io_methods`/`sqlite3_vfs` ABI; `sqlite3JournalCreate` is
       ATOMIC_WRITE-gated (off) so omitted. Validated incl. the spill-to-disk
       path: jrnlmode/savepoint/trigger2/fkey2 (statement journals) green.
-- [ ] `memdb.c` — in-memory VFS
+- [x] `memdb.c` — in-memory VFS → `src/memdb.zig`.
 - [ ] (defer) `os_win.c`, `os_kv.c`
 
 **Exit criteria:** Zig VFS backs all I/O on Linux; suite green.
@@ -137,11 +169,11 @@ heavy reliance on the corruption/recovery tests.
       private Pager struct owned here, PgHdr mirrored with comptime asserts).
       Every byte of file I/O now flows through Zig pager→pcache→os/VFS. TCL
       pagerfault(31589)/ioerr(10885)/savepoint4(3469)/wal/wal2/jrnlmode green.
-- [ ] `wal.c` — write-ahead log (~178 KB) — still C (pager calls it via ABI)
+- [x] `wal.c` — write-ahead log → `src/wal.zig`.
 - [x] `btree.c` (on-disk format, cursors, balancing, autovacuum, shared-cache,
       overflow, integrity_check) -> src/btree.zig. Agent byte-exact-validated vs
       C + cross-version compat; TCL corrupt(12288)/autovacuum/index green.
-- [ ] `backup.c`
+- [x] `backup.c` → `src/backup.zig`.
 
 **Exit criteria:** on-disk format byte-compatible; pager/btree/wal/corrupt
 tests green; can open a file created by upstream and vice versa.
@@ -168,7 +200,7 @@ is Zig; 1000+ upstream tests pass; FTS5/RTree vtab writes work). One minor
 
 Tokenizer → parser → code generator → optimizer. Depends on VDBE.
 
-- [ ] `tokenize.c` + `keywordhash.h` generation
+- [x] `tokenize.c` (+ keyword hash) → `src/tokenize.zig`.
 - [ ] Parser: port `parse.y`. Decide **Lemon strategy** — either (a) keep Lemon
       generating C `parse.c` and call it via ABI, (b) port the Lemon-generated
       table-driven parser to Zig, or (c) port the `lemon` generator itself.
@@ -179,7 +211,7 @@ Tokenizer → parser → code generator → optimizer. Depends on VDBE.
       Phase 5; they sit on the already-ported prepare/callback/util layer.)
 - [x] `trigger.c` (triggers + RETURNING + INSTEAD OF) → `src/trigger.zig`.
       `fkey.c` (foreign-key codegen) → `src/fkey.zig`.
-- [ ] Remaining code generators: `expr.c`, `build.c`, `select.c`, `insert.c`,
+- [x] Code generators DONE: `expr.c`, `build.c`, `select.c`, `insert.c`, `where*.c`, `resolve.c`,
       `update.c`, `delete.c`, `where*.c` (optimizer), `resolve.c`, `walker.c`,
       `analyze.c`, `pragma.c`, `alter.c`
 - [x] `date.c` (date/time fns) → `src/date.zig`. SQL functions remaining:
@@ -201,7 +233,7 @@ Tokenizer → parser → code generator → optimizer. Depends on VDBE.
 - [x] `vdbevtab.c` — bytecode()/tables_used() vtab → `src/vdbevtab.zig`.
 - [x] `loadext.c` — runtime extension loading + the 279-slot `sqlite3_api_routines`
       table → `src/loadext.zig`.
-- [x] `prepare.c` (sqlite3_prepare* + schema init) → `src/prepare.zig`.
+- [x] `prepare.c` → `src/prepare.zig`. `main.c` (open/close/config/errors/hooks) → `src/main.zig`.
       `vtab.c` → `src/vtab.zig`. `main.c` remains.
 - [ ] `sqlite.h.in` → produce a Zig-friendly + C-ABI `sqlite3.h`
 - [ ] `shell.c.in` — CLI (can stay C longest; low value to port early)
@@ -219,7 +251,7 @@ full `testrunner.tcl full` green.
 - [x] `fts3_unicode2.c` (fold data) and `fts3_aux.c` (fts4aux vtab) →
       `src/fts3_unicode2.zig`/`src/fts3_aux.zig` (fts3aux1/2, fts4unicode green).
 - [x] `stmt.c` — the `sqlite_stmt` eponymous vtab → `src/stmt.zig`.
-- [ ] FTS5, RTREE, JSON1 (if not folded in), session, rbu — under `ext/`
+- [x] RTREE+geopoly, session, FTS3/4 DONE; JSON1 folded in (json.zig); FTS5 in progress; rbu inactive.
 - [ ] Windows VFS (`os_win.c`), other platforms
 - [ ] A native Zig API surface (idiomatic, not just the C ABI)
 
