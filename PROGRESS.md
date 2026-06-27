@@ -4,7 +4,26 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 70 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 71 modules ported, incl. the full VDBE interpreter
+
+**71st module: `expr.c` → `src/expr.zig` — expression code generation** (~5400
+lines, 112 exports): affinity/collation, sqlite3Expr* construction & dup,
+ExprCode/CodeTarget + IfTrue/IfFalse, IN/EXISTS/scalar-subquery setup, CASE/
+BETWEEN, scalar+aggregate function calls, vector compares, aggregate analysis.
+Six integration bugs found & fixed while validating (all in the drafted port,
+see commit): listA() deref of the ExprList.a INLINE array; wrong P4_* operand
+constants (P4_REAL collided with P4_VTAB); FUNC_RETURNED sentinel vs the
+RunJustOnce register (scalar funcs → 0.0); wrong SRT_Set/Mem/Exists; the
+ExprCodeExprList OMITREF two-counter loop (ORDER BY/window dropped columns past
+the first); FG_fixedSchema bit 1<<25→1<<24 (views/triggers "no such table .t").
+Validated: zig build + `zig build test` GREEN; broad production-shell smoke
+correct across arithmetic/CASE/IN/EXISTS/subquery/CAST/collation/LIKE/GLOB/
+window/CTE/**views**/**triggers**/JSON. KNOWN: (1) select1-6.20 (compound
+`UNION…ORDER BY LIMIT` inside IN) is correct in the production shell but
+segfaults in the `--dev` (SQLITE_DEBUG) testfixture — needs testfixture debug;
+(2) `agg() FILTER(WHERE…)` combined with other aggregates returns a wrong count
+— **confirmed PRE-EXISTING** (reproduces with C `expr.c` linked; a sibling-
+aggregate register issue in another module, not this port).
 
 **70th module: `malloc.c` → `src/malloc.zig` — the core allocation interface
 above mem1/mem5** (public sqlite3_malloc* API + internal sqlite3DbMalloc*/
