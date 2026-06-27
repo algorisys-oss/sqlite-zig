@@ -4,9 +4,17 @@ The running log of where the migration stands and exactly how to pick it back
 up. Read this first when resuming. See [plan.md](plan.md) for the full roadmap
 and [CLAUDE.md](CLAUDE.md) for conventions.
 
-## Current status: Phase 1 — 60 modules ported, incl. the full VDBE interpreter
+## Current status: Phase 1 — 61 modules ported, incl. the full VDBE interpreter
 
-**Latest (60th module): `upsert.c` → `src/upsert.zig` — UPSERT / ON CONFLICT.**
+**Latest (61st module): `tokenize.c` → `src/tokenize.zig` — the SQL tokenizer,
+the keywordhash.h keyword tables, and the Lemon-parser driver
+(`sqlite3GetToken`/`sqlite3RunParser`/`sqlite3KeywordCode`/`sqlite3_keyword_*`).
+Keyword tables verified byte-for-byte; validated via `tcltest --zig` tokenize
+(15) / keyword1 (117) / select1 (192) / where2 (107), 0 errors. (Drafted by a
+background agent; integration fixed an `nVar` read-as-c_int that spilled into
+`Parse.explain` and broke EXPLAIN reprepare — see Known issues "fixed".)**
+
+**60th module: `upsert.c` → `src/upsert.zig` — UPSERT / ON CONFLICT.**
 Implements the whole Upsert lifecycle + codegen
 (`sqlite3Upsert{Delete,Dup,New,AnalyzeTarget,NextIsIPK,OfIndex,DoUpdate}`).
 Validated through the production `zig build` across every path upsert.c
@@ -70,42 +78,28 @@ SetStr/SetText; two dropped no-op/DEBUG-only helpers (`sqlite3VdbeIOTraceSql`,
 
 ### Known issues
 
-- **Op-array corruption on EXISTS/subquery over a compound (UNION ALL) view**
-  (pre-existing; reproduced with this session's changes stashed). Surfaces as
-  `where2-6.17.2` aborting under `testfixture_zig` on C `expr.c:3973`
-  `assert(VdbeGetOp(v,pExpr->y.sub.iAddr-1)->opcode==OP_BeginSubrtn)`, and as a
-  hard crash in the **production** zig shell (`opSavepoint` null-deref —
-  executing opcode 0).
-
-  Minimal repro (crashes the production shell, data-independent):
-  ```sql
-  CREATE TABLE a(x INTEGER PRIMARY KEY,y);
-  CREATE TABLE b(p INTEGER PRIMARY KEY,q);
-  CREATE VIEW v AS SELECT x,y FROM a UNION ALL SELECT p,q FROM b;
-  SELECT EXISTS(SELECT 1 FROM v WHERE x=1) FROM v;
-  ```
-  Root symptom: the generated program's main body is partially **zeroed** — for
-  the minimal case `Init→44`, then the prologue `Transaction; Goto 1`, but
-  op-slots `1..36` are all opcode-0 (`OP_Savepoint`) with only the tail
-  (`37..43`, the result loop) intact. Execution `Goto 1` lands in the zeroed
-  region → dispatches `OP_Savepoint` → `opSavepoint` reads a NULL name. A few of
-  the zeroed slots have operands set (e.g. `p2=49`) but opcode==0, i.e. the
-  **opcode byte specifically was cleared** while operands survived — points at a
-  bad write to `VdbeOp.opcode` (offset 0) during codegen, *not* simple
-  array-growth (growOpArray/realloc preserve content). Needs debugging of the
-  co-routine-inside-subroutine assembly in `vdbeaux.zig` (op array / address
-  bookkeeping) for this pattern. Does **not** trigger for non-compound views,
-  compound subselects without the rowid (`WHERE x=1`) lookup, or plain
-  `x IN (…)`. Baseline all-C testfixture is fine; `where` (318) and `where2`
-  through 6.16 pass under `--zig`.
-
 - **Two benign over-sized literals in build.zig** (found by the offset audit;
   not corruption, just waste): `sizeof_Index` fallback = 120 (real 112, build.zig:3330)
   over-allocates 8 bytes/index; `sizeof_sqlite3_str` = 48 (real 32, build.zig:4293)
   over-sizes a stack StrAccum. Both self-consistent. To fold into the next
   build.zig edit. (analyze.zig already uses the correct 112.)
 
-**Fixed this session (RETURNING was completely broken + 2 Index-flag bugs):**
+**Fixed (view/op-array corruption + EXPLAIN-reprepare regression):**
+
+- **Op-array corruption on any view query** (`695a494`). `build.zig`'s
+  view-column-name resolver read/wrote `Lookaside.sz`/`szTrue` as u32 instead of
+  u16 (real: u16 @436/@438), zeroing `szTrue`. `sqlite3DbMallocSize` then
+  returned a bogus size and `growOpArray`'s realloc dropped already-emitted
+  opcodes → zeroed op-slots dispatched as `OP_Savepoint(0)` → crash. Hit ANY
+  query referencing a view; surfaced as the EXISTS-over-compound-view crash and
+  `where2-6.17.2`. Root-caused via gdb (background agent); fkey.zig/c_layout
+  already had the correct layout. `where2` now 0/107.
+- **`tokenize.zig` nVar read-as-c_int** (`540ff3c`). `nVar` is `ynVar`=i16; the
+  c_int read in the `sqlite3RunParser` preamble assert spilled into
+  `Parse.explain@299`, so an EXPLAIN going through `sqlite3Reprepare` (explain=2)
+  spuriously panicked (`where2-12.1`). Read as i16.
+
+**Fixed earlier this session (RETURNING was completely broken + 2 Index-flag bugs):**
 
 0. **`Index_bHasExpr_byte` off-by-one** in delete.zig & insert.zig (101→100,
    commit `67894c4`). bHasExpr is at byte onError+2, not onError+3 (padding), so
