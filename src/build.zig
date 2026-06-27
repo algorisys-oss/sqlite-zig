@@ -943,7 +943,10 @@ export fn sqlite3FinishCoding(pParse: Cptr) void {
             if (dbMaskTest(pParse, Parse_cookieMask, iDb)) {
                 sqlite3VdbeUsesBtree(v, iDb);
                 const pSchema = dbSchema(db, iDb);
-                _ = sqlite3VdbeAddOp4Int(v, OP_Transaction, iDb, @intFromBool(dbMaskTest(pParse, Parse_writeMask, iDb)), @intCast(rd(u32, pSchema, Schema_schema_cookie)), @intCast(rd(u32, pSchema, Schema_iGeneration)));
+                // schema_cookie / iGeneration are C `int`; pass sign-preserving
+                // (reading as u32 + @intCast panics on negative cookies, e.g. after
+                // PRAGMA schema_version on a deserialized db — memdb1-710).
+                _ = sqlite3VdbeAddOp4Int(v, OP_Transaction, iDb, @intFromBool(dbMaskTest(pParse, Parse_writeMask, iDb)), rd(c_int, pSchema, Schema_schema_cookie), rd(c_int, pSchema, Schema_iGeneration));
                 if (initBusy(db) == 0) sqlite3VdbeChangeP5(v, 1);
                 const usesStmtJournal: c_int = @intFromBool(bftGet(pParse, Parse_bft_byte, BFT_mayAbort) and rd(u8, pParse, Parse_isMultiWrite) != 0);
                 sqlite3VdbeComment(v, "usesStmtJournal=%d", usesStmtJournal);
