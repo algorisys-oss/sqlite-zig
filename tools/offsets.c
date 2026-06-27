@@ -674,6 +674,91 @@ int main(void) {
     printf("Sqlite3Config_m_xShutdown %zu\n", offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xShutdown));
     printf("Sqlite3Config_m_pAppData %zu\n",  offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, pAppData));
 
+    /* expr.c — AggInfo + nested col/func sub-structs */
+    P(AggInfo, directMode);
+    P(AggInfo, useSortingIdx);
+    P(AggInfo, nSortingColumn);
+    P(AggInfo, sortingIdxPTab);
+    P(AggInfo, iFirstReg);
+    P(AggInfo, pGroupBy);
+    P(AggInfo, aCol);
+    P(AggInfo, nColumn);
+    P(AggInfo, aFunc);
+    P(AggInfo, nFunc);
+    SZ(AggInfo_col, AggInfo_col);
+    P(AggInfo_col, pTab);
+    P(AggInfo_col, pCExpr);
+    P(AggInfo_col, iTable);
+    P(AggInfo_col, iColumn);
+    P(AggInfo_col, iSorterColumn);
+    SZ(AggInfo_func, AggInfo_func);
+    P(AggInfo_func, pFExpr);
+    P(AggInfo_func, pFunc);
+    P(AggInfo_func, iDistinct);
+    P(AggInfo_func, iOBTab);
+    P(AggInfo_func, bOBPayload);
+    P(AggInfo_func, bOBUnique);
+    P(AggInfo_func, bUseSubtype);
+    /* expr.c — Expr */
+    P(Expr, iAgg);
+    P(Expr, nHeight);
+    P(Expr, w);
+#ifdef SQLITE_DEBUG
+    P(Expr, vvaFlags);
+#endif
+    printf("Expr_y_sub_regReturn %zu\n", offsetof(struct Expr, y.sub.regReturn));
+    printf("EXPR_REDUCEDSIZE %zu\n", offsetof(struct Expr, iTable));
+    printf("EXPR_TOKENONLYSIZE %zu\n", offsetof(struct Expr, pLeft));
+    /* expr.c — ExprList_item nested union fields */
+    P(ExprList, nAlloc);
+    P(ExprList_item, fg);
+    P(ExprList_item, u);
+    printf("ExprList_item_u_iConstExprReg %zu\n", offsetof(struct ExprList_item, u.iConstExprReg));
+    printf("ExprList_item_u_x_iOrderByCol %zu\n", offsetof(struct ExprList_item, u.x.iOrderByCol));
+    /* expr.c — IdList_item / IndexedExpr / OnOrUsing */
+    P(IdList_item, zName);
+    SZ(IdList_item, IdList_item);
+    P(IndexedExpr, pExpr);
+    P(IndexedExpr, iDataCur);
+    P(IndexedExpr, iIdxCur);
+    P(IndexedExpr, iIdxCol);
+    P(IndexedExpr, bMaybeNullRow);
+    P(IndexedExpr, aff);
+    P(IndexedExpr, pIENext);
+    P(OnOrUsing, pOn);
+    P(OnOrUsing, pUsing);
+    /* expr.c — Parse register/subroutine bookkeeping */
+    P(Parse, aTempReg);
+    P(Parse, iRangeReg);
+    P(Parse, mSubrtnSig);
+    P(Parse, nLabel);
+    P(Parse, nRangeReg);
+    P(Parse, nTempReg);
+    P(Parse, pIdxEpr);
+    P(Parse, pIdxPartExpr);
+    P(Parse, pVList);
+    P(Parse, withinRJSubrtn);
+    /* expr.c — Select / SelectDest / SrcItem */
+    P(SelectDest, eDest);
+    P(SelectDest, iSDParm2);
+    P(SelectDest, zAffSdst);
+    P(Select, iLimit);
+    P(Select, iOffset);
+    P(Select, nSelectRow);
+    P(Select, pNext);
+    P(SrcItem, colUsed);
+    P(SrcItem, u2);
+    /* expr.c — Subquery / SubrtnSig / Walker */
+    SZ(Subquery, Subquery);
+    SZ(SubrtnSig, SubrtnSig);
+    P(SubrtnSig, selId);
+    P(SubrtnSig, bComplete);
+    P(SubrtnSig, zAff);
+    P(SubrtnSig, iTable);
+    P(SubrtnSig, iAddr);
+    P(SubrtnSig, regReturn);
+    P(Walker, mWFlags);
+
     /* btmutex.c */
     P(Btree, sharable);
     P(Btree, locked);
