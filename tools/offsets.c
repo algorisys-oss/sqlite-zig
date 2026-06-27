@@ -647,5 +647,30 @@ int main(void) {
     P(Module, zName);
     P(Sqlite3Config, szMmap);
 
+    /* status.c */
+    P(Hash, count);
+    P(Hash, ht);
+    SZ(HashElem, HashElem);
+    printf("sqlite3_lookaside_pInit %zu\n",      offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, pInit));
+    printf("sqlite3_lookaside_pFree %zu\n",      offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, pFree));
+    printf("sqlite3_lookaside_pSmallInit %zu\n", offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, pSmallInit));
+    printf("sqlite3_lookaside_pSmallFree %zu\n", offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, pSmallFree));
+    printf("sqlite3_lookaside_nSlot %zu\n",      offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, nSlot));
+    printf("sqlite3_lookaside_anStat %zu\n",     offsetof(struct sqlite3, lookaside) + offsetof(struct Lookaside, anStat));
+    printf("Sqlite3Config_m_xRoundup %zu\n",     offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xRoundup));
+
+    /* memdb.c */
+    P(Sqlite3Config, mxMemdbSize);
+
+    /* btmutex.c */
+    P(Btree, sharable);
+    P(Btree, locked);
+    P(Btree, wantToLock);
+    P(Btree, pNext);
+    P(Btree, pPrev);
+    P(BtShared, db);
+    P(BtShared, mutex);
+    P(BtCursor, pBtree);
+
     return 0;
 }

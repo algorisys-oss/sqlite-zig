@@ -547,6 +547,25 @@ const prod = struct {
     pub const FuncDef_nArg: usize = 0;
     pub const Module_zName: usize = 8;
     pub const Sqlite3Config_szMmap: usize = 296;
+    pub const Hash_count: usize = 4;
+    pub const Hash_ht: usize = 16;
+    pub const sizeof_HashElem: usize = 40;
+    pub const sqlite3_lookaside_pInit: usize = 464;
+    pub const sqlite3_lookaside_pFree: usize = 472;
+    pub const sqlite3_lookaside_pSmallInit: usize = 480;
+    pub const sqlite3_lookaside_pSmallFree: usize = 488;
+    pub const sqlite3_lookaside_nSlot: usize = 444;
+    pub const sqlite3_lookaside_anStat: usize = 448;
+    pub const Sqlite3Config_m_xRoundup: usize = 64;
+    pub const Sqlite3Config_mxMemdbSize: usize = 392;
+    pub const Btree_sharable: usize = 17;
+    pub const Btree_locked: usize = 18;
+    pub const Btree_wantToLock: usize = 20;
+    pub const Btree_pNext: usize = 32;
+    pub const Btree_pPrev: usize = 40;
+    pub const BtShared_db: usize = 8;
+    pub const BtShared_mutex: usize = 88;
+    pub const BtCursor_pBtree: usize = 8;
 };
 
 /// --dev testfixture config (SQLITE_DEBUG + SQLITE_TEST).
@@ -1089,6 +1108,25 @@ const tf = struct {
     pub const FuncDef_nArg: usize = 0;
     pub const Module_zName: usize = 8;
     pub const Sqlite3Config_szMmap: usize = 296;
+    pub const Hash_count: usize = 4;
+    pub const Hash_ht: usize = 16;
+    pub const sizeof_HashElem: usize = 40;
+    pub const sqlite3_lookaside_pInit: usize = 464;
+    pub const sqlite3_lookaside_pFree: usize = 472;
+    pub const sqlite3_lookaside_pSmallInit: usize = 480;
+    pub const sqlite3_lookaside_pSmallFree: usize = 488;
+    pub const sqlite3_lookaside_nSlot: usize = 444;
+    pub const sqlite3_lookaside_anStat: usize = 448;
+    pub const Sqlite3Config_m_xRoundup: usize = 64;
+    pub const Sqlite3Config_mxMemdbSize: usize = 392;
+    pub const Btree_sharable: usize = 17;
+    pub const Btree_locked: usize = 18;
+    pub const Btree_wantToLock: usize = 20;
+    pub const Btree_pNext: usize = 32;
+    pub const Btree_pPrev: usize = 40;
+    pub const BtShared_db: usize = 8;
+    pub const BtShared_mutex: usize = 88;
+    pub const BtCursor_pBtree: usize = 8;
 };
 
 /// The layout namespace matching the current build.
