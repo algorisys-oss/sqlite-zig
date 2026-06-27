@@ -755,6 +755,34 @@ int main(void) {
     printf("Index_idxType %zu\n", offsetof(struct Index, onError) + 1);
     printf("StrAccum_printfFlags %zu\n", offsetof(struct sqlite3_str, printfFlags));
 
+    /* select.c */
+    P(AggInfo, nAccumulator);
+    P(AggInfo, selId);
+    P(AggInfo, sortingIdx);
+    SZ(AggInfo, AggInfo);
+    P(AggInfo_func, iDistAddr);
+    P(Cte, pUse);
+    P(Cte, zCteErr);
+    P(CteUse, nUse);
+    P(CteUse, addrM9e);
+    P(CteUse, regRtn);
+    P(CteUse, iCur);
+    P(CteUse, nRowEst);
+    P(CteUse, eM10d);
+    SZ(CteUse, CteUse);
+    P(With, pOuter);
+    SZ(With, With);
+    printf("With_bView_byte %zu\n", offsetof(struct With, bView));
+    P(KeyInfo, nRef);
+    P(KeyInfo, enc);
+    P(NameContext, pNext);
+    P(Parse, nHeight);
+    P(Parse, nNestSel);
+    P(SelectDest, pOrderBy);
+    printf("Index_idxType_byte %zu\n", offsetof(struct Index, onError) + 1);
+    printf("Index_bUnordered_byte %zu\n", offsetof(struct Index, onError) + 1);
+    SZ(Hash, Hash);
+
     /* expr.c — AggInfo + nested col/func sub-structs */
     P(AggInfo, directMode);
     P(AggInfo, useSortingIdx);
