@@ -14,6 +14,7 @@
 #include "vdbeInt.h"
 #include "vdbe.h"
 #include "btreeInt.h"
+#include "whereInt.h"
 #include <stdio.h>
 #include <stddef.h>
 
@@ -673,6 +674,53 @@ int main(void) {
     printf("Sqlite3Config_m_xInit %zu\n",     offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xInit));
     printf("Sqlite3Config_m_xShutdown %zu\n", offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, xShutdown));
     printf("Sqlite3Config_m_pAppData %zu\n",  offsetof(struct Sqlite3Config, m) + offsetof(sqlite3_mem_methods, pAppData));
+
+    /* whereexpr.c / WHERE subsystem (whereInt.h structs are config-dependent:
+    ** SQLITE_DEBUG adds WhereTerm.iTerm, shifting u/prereq* and sizes — gen_layout
+    ** compiles both configs so prod/tf blocks get the right values). */
+    P(WhereClause, pWInfo);
+    P(WhereClause, pOuter);
+    P(WhereClause, op);
+    P(WhereClause, hasOr);
+    P(WhereClause, nTerm);
+    P(WhereClause, nSlot);
+    P(WhereClause, nBase);
+    P(WhereClause, a);
+    P(WhereClause, aStatic);
+    SZ(WhereClause, WhereClause);
+    P(WhereTerm, pExpr);
+    P(WhereTerm, pWC);
+    P(WhereTerm, truthProb);
+    P(WhereTerm, wtFlags);
+    P(WhereTerm, eOperator);
+    P(WhereTerm, nChild);
+    P(WhereTerm, eMatchOp);
+    P(WhereTerm, iParent);
+    P(WhereTerm, leftCursor);
+#ifdef SQLITE_DEBUG
+    P(WhereTerm, iTerm);
+#endif
+    P(WhereTerm, u);
+    printf("WhereTerm_u_x_leftColumn %zu\n", offsetof(struct WhereTerm, u.x.leftColumn));
+    printf("WhereTerm_u_x_iField %zu\n", offsetof(struct WhereTerm, u.x.iField));
+    P(WhereTerm, prereqRight);
+    P(WhereTerm, prereqAll);
+    SZ(WhereTerm, WhereTerm);
+    P(WhereInfo, pParse);
+    P(WhereInfo, pTabList);
+    P(WhereInfo, sMaskSet);
+    P(WhereMaskSet, bVarSelect);
+    P(WhereOrInfo, wc);
+    P(WhereOrInfo, indexable);
+    SZ(WhereOrInfo, WhereOrInfo);
+    P(WhereAndInfo, wc);
+    SZ(WhereAndInfo, WhereAndInfo);
+    printf("Expr_w_iJoin %zu\n", offsetof(struct Expr, w.iJoin));
+    printf("SrcItem_u1_pFuncArg %zu\n", offsetof(struct SrcItem, u1.pFuncArg));
+    printf("SrcItem_u3_pOn %zu\n", offsetof(struct SrcItem, u3.pOn));
+    P(VTable, pVtab);
+    P(sqlite3_vtab, pModule);
+    P(sqlite3_module, xFindFunction);
 
     /* expr.c — AggInfo + nested col/func sub-structs */
     P(AggInfo, directMode);

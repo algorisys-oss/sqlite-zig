@@ -118,6 +118,7 @@ const ported_modules = [_][]const u8{
     "memdb.c", // -> src/memdb.zig (in-memory VFS + sqlite3_serialize/deserialize)
     "malloc.c", // -> src/malloc.zig (core allocation interface above mem1/mem5)
     "expr.c", // -> src/expr.zig (expression code generation)
+    "whereexpr.c", // -> src/whereexpr.zig (WHERE-clause analysis into WhereTerms)
     "resolve.c", // -> src/resolve.zig (name resolution)
     "vdbe.c", // -> src/vdbe.zig (bytecode interpreter: sqlite3VdbeExec dispatch loop)
     "func.c", // -> src/func.zig (built-in SQL scalar/aggregate functions)
