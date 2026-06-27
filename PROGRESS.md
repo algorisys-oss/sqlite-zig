@@ -18,12 +18,13 @@ ExprCodeExprList OMITREF two-counter loop (ORDER BY/window dropped columns past
 the first); FG_fixedSchema bit 1<<25→1<<24 (views/triggers "no such table .t").
 Validated: zig build + `zig build test` GREEN; broad production-shell smoke
 correct across arithmetic/CASE/IN/EXISTS/subquery/CAST/collation/LIKE/GLOB/
-window/CTE/**views**/**triggers**/JSON. KNOWN: (1) select1-6.20 (compound
+window/CTE/**views**/**triggers**/JSON. Two surfaced issues are BOTH **confirmed
+PRE-EXISTING** (each reproduces with C `expr.c` linked, so neither is from this
+port — they live in another already-ported module): (1) select1-6.20 (compound
 `UNION…ORDER BY LIMIT` inside IN) is correct in the production shell but
-segfaults in the `--dev` (SQLITE_DEBUG) testfixture — needs testfixture debug;
-(2) `agg() FILTER(WHERE…)` combined with other aggregates returns a wrong count
-— **confirmed PRE-EXISTING** (reproduces with C `expr.c` linked; a sibling-
-aggregate register issue in another module, not this port).
+segfaults in the `--dev` SQLITE_DEBUG testfixture; (2) `agg() FILTER(WHERE…)`
+combined with other aggregates returns a wrong count (sibling-aggregate register
+issue). Added to Known issues for separate follow-up.
 
 **70th module: `malloc.c` → `src/malloc.zig` — the core allocation interface
 above mem1/mem5** (public sqlite3_malloc* API + internal sqlite3DbMalloc*/
@@ -173,6 +174,15 @@ Two pre-existing bugs surfaced (proven *not* in vdbesort — both reproduce with
 - **`btree.zig balance` OOM panic** (btree.zig:5610) on a `fakeheap`/OOM-injection
   path during a post-sort index insert (`sort.test` combo 5 / `sortfault` final
   abort). A btree OOM-unwind issue, not sorter.
+- **Compound subquery in IN segfaults under SQLITE_DEBUG** — `select1-6.20`
+  (`… IN (SELECT … UNION SELECT … ORDER BY 1 LIMIT 1)`) is correct in the
+  production shell but raw-segfaults (memory corruption, no Zig trace) in the
+  `--dev` testfixture. Proven PRE-EXISTING: reproduces with C `expr.c` linked, so
+  it lives in another ported module (vdbe/btree/select-coordination), not expr.
+- **`agg() FILTER(WHERE…)` with sibling aggregates** returns a wrong count
+  (`count(*) FILTER(WHERE a>1), max(c), min(a)` → 0 instead of 2; the count drops
+  by one per sibling aggregate — a register-assignment collision). PRE-EXISTING:
+  reproduces with C `expr.c` linked.
 
 **Fixed (STRICT enforcement + view/op-array corruption + EXPLAIN-reprepare):**
 
