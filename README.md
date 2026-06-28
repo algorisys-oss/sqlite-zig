@@ -312,7 +312,7 @@ recurring C→Zig bug patterns the suites catch).
 | `test/` | Functional regression battery + golden output. |
 | [plan.md](plan.md) | Phased migration roadmap. |
 | [PROGRESS.md](PROGRESS.md) | Current status, resume point, and how to port a module. |
-| [docs/](docs/) | Design & process notes — [architecture.md](docs/architecture.md), [testing.md](docs/testing.md), [migration-workflow.md](docs/migration-workflow.md), [not-migrated.md](docs/not-migrated.md). |
+| [docs/](docs/) | Design & process notes — [architecture.md](docs/architecture.md), [testing.md](docs/testing.md), [migration-workflow.md](docs/migration-workflow.md), [not-migrated.md](docs/not-migrated.md), [turso-comparison.md](docs/turso-comparison.md) (feature comparison vs. the Rust SQLite rewrite). |
 | [CLAUDE.md](CLAUDE.md) | Agent/contributor conventions. |
 
 ## License
