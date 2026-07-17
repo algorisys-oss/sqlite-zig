@@ -348,10 +348,15 @@ pub fn build(b: *std.Build) void {
     // — and linked against our libsqlite3.a. This is a separate, opt-in step: it
     // does not touch `zig build` or `zig build test`, so the fidelity build is
     // unaffected exactly as the fork charter requires.
+    // Aggregate gate: `zig build zturso-test` runs every fork demo and fails if
+    // any exits non-zero (each demo self-checks and returns 0 only on success).
+    const zturso_test = b.step("zturso-test", "Run all sqlite-zturso fork demos as a pass/fail gate");
+
     // Helper: an executable that compiles one fork-only C source against our
-    // libsqlite3.a, using the same sqlite_flags as the ported modules.
-    const zturso = struct {
-        fn target_step(bb: *std.Build, tgt: anytype, opt: anytype, l: anytype, flags: []const []const u8, name: []const u8, src: []const u8, step_name: []const u8, desc: []const u8, forward_args: bool) void {
+    // libsqlite3.a, using the same sqlite_flags as the ported modules. Registers
+    // both a named step and membership in the zturso-test gate.
+    const Zturso = struct {
+        fn step(bb: *std.Build, tgt: anytype, opt: anytype, l: anytype, flags: []const []const u8, agg: *std.Build.Step, name: []const u8, src: []const u8, step_name: []const u8, desc: []const u8, forward_args: bool) void {
             const m = bb.createModule(.{ .target = tgt, .optimize = opt, .link_libc = true });
             m.linkLibrary(l);
             m.linkSystemLibrary("z", .{});
@@ -360,6 +365,7 @@ pub fn build(b: *std.Build) void {
             m.addCSourceFile(.{ .file = bb.path(src), .flags = flags });
             const exe = bb.addExecutable(.{ .name = name, .root_module = m });
             const run_art = bb.addRunArtifact(exe);
+            run_art.setCwd(bb.path(".")); // stable cwd so file-backed demos find a writable dir
             if (forward_args) {
                 if (@hasField(@TypeOf(bb.*), "args")) {
                     if (bb.args) |a| run_art.addArgs(a);
@@ -371,10 +377,14 @@ pub fn build(b: *std.Build) void {
             // fidelity build stays free of experimental artifacts.
             s.dependOn(&bb.addInstallArtifact(exe, .{}).step);
             s.dependOn(&run_art.step);
+            agg.dependOn(&run_art.step); // and into the aggregate gate
         }
     };
-    zturso.target_step(b, target, optimize, lib, &sqlite_flags, "zturso_frontend", "src/zturso/frontend.c", "zturso", "Phase 1b: input-driven frontend (text->AST->VDBE) on the ported engine", true);
-    zturso.target_step(b, target, optimize, lib, &sqlite_flags, "zturso_poc", "src/zturso/poc_frontend.c", "zturso-poc", "Phase 1a: run a hand-emitted VDBE program on the ported engine", false);
+    Zturso.step(b, target, optimize, lib, &sqlite_flags, zturso_test, "zturso_frontend", "src/zturso/frontend.c", "zturso", "Phase 1: SQL frontend (text->AST->VDBE, incl. FROM/WHERE) on the ported engine", true);
+    Zturso.step(b, target, optimize, lib, &sqlite_flags, zturso_test, "zturso_poc", "src/zturso/poc_frontend.c", "zturso-poc", "Phase 1a: run a hand-emitted VDBE program on the ported engine", false);
+    Zturso.step(b, target, optimize, lib, &sqlite_flags, zturso_test, "zturso_vfs", "src/zturso/trace_vfs.c", "zturso-vfs", "Phase 2: route the ported engine's I/O through a pluggable VFS", false);
+    Zturso.step(b, target, optimize, lib, &sqlite_flags, zturso_test, "zturso_vector", "src/zturso/vector.c", "zturso-vector", "Phase 4: vector search (kNN) over the ported engine via registered functions", false);
+    Zturso.step(b, target, optimize, lib, &sqlite_flags, zturso_test, "zturso_mvcc", "src/zturso/mvcc_demo.c", "zturso-mvcc", "Phase 3: concurrency baseline demo (marks the MVCC boundary; see docs/zturso/phase3-mvcc.md)", false);
 }
 
 /// The library translation-unit list. Sourced from vendor/tu.txt (one C

@@ -48,10 +48,28 @@ invasive storage rework (MVCC) last, with the earlier phases' lessons in hand.
 
 ## Current status
 
-- **Phase 1: in progress.** Branch created off `dev@b5c8ae0` (full ported tree).
-  Building a `zig build zturso` demo target that hand-emits a VDBE program via the
-  ported `sqlite3VdbeAddOp*` API and runs it on the ported interpreter — proving
-  the VDBE is a genuinely pluggable IR before we grow a real parser.
+All demos run via `zig build zturso-test` (pass/fail gate). Details and per-demo
+commands: [src/zturso/README.md](src/zturso/README.md).
+
+| Phase | State | Demo target |
+|---|---|---|
+| **1a** hand-emitted VDBE program | ✅ working | `zturso-poc` |
+| **1b** integer-expression frontend (text→AST→VDBE) | ✅ working | `zturso` |
+| **1c** table reads `SELECT … FROM t WHERE …` (cursor opcodes) — output **byte-identical to SQLite** | ✅ working | `zturso` |
+| **2** pluggable VFS (I/O seam an `io_uring` backend plugs into) | ✅ seam proven | `zturso-vfs` |
+| **4** vector search (kNN) via registered functions | ✅ working | `zturso-vector` |
+| **3** MVCC / `BEGIN CONCURRENT` (concurrent writers) | ⛔ **design only** — multi-month pager/btree rewrite | `zturso-mvcc` + [docs/zturso/phase3-mvcc.md](docs/zturso/phase3-mvcc.md) |
+
+**Honest scope:** Phases 1, 2, 4 are working code. Phase 3 (true MVCC) is **not
+implemented** — the `zturso-mvcc` demo marks the exact concurrency boundary
+(readers + snapshot isolation work today; concurrent writers don't) and the
+design note plans the storage-layer rewrite. Phases 2 and 3's *full* payloads
+(async io_uring submission; versioned rows + txn manager) remain the large
+follow-on engineering.
+
+Branch created off `dev@b5c8ae0` (full ported tree). The fidelity build
+(`zig build`, `zig build test`) is verified unaffected — no experimental
+artifacts leak into it and `libsqlite3` is unchanged.
 
 ## Why bother
 
