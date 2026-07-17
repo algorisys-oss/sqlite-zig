@@ -30,6 +30,7 @@
 ** a frontend lives below the public sqlite3.h. Linked against our libsqlite3.a.
 */
 #include "sqliteInt.h"
+#include "zturso_frontend.h"   /* the reusable zturso_prepare() entry point */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,7 +41,7 @@
 #define T_NE 303
 
 /* ───────────────────────────── AST ───────────────────────────── */
-typedef enum { N_NUM, N_BIN, N_NEG, N_COL } NodeKind;
+typedef enum { N_NUM, N_BIN, N_NEG, N_COL, N_STR } NodeKind;
 typedef struct Node Node;
 struct Node {
   NodeKind kind;
@@ -88,6 +89,12 @@ static void next(P *s){
     const char *b=p; while( sqlite3Isalnum((unsigned char)*p) || *p=='_' ) p++;
     s->idz=b; s->idn=(int)(p-b); s->tok=kw(b,s->idn); s->p=p; return;
   }
+  if( *p=='\'' ){                       /* 'text' string literal */
+    const char *b=++p; while( *p && *p!='\'' ) p++;
+    s->idz=b; s->idn=(int)(p-b);
+    if( *p=='\'' ) p++;
+    s->tok='T'; s->p=p; return;
+  }
   switch( *p ){
     case '<': if(p[1]=='='){s->tok=T_LE;s->p=p+2;} else if(p[1]=='>'){s->tok=T_NE;s->p=p+2;} else {s->tok='<';s->p=p+1;} return;
     case '>': if(p[1]=='='){s->tok=T_GE;s->p=p+2;} else {s->tok='>';s->p=p+1;} return;
@@ -104,6 +111,7 @@ static Node *parseExpr(P *s);
 static Node *parsePrimary(P *s){
   if( s->tok=='N' ){ Node *n=node(s); if(!n)return 0; n->kind=N_NUM; n->ival=s->num; next(s); return n; }
   if( s->tok=='I' ){ Node *n=node(s); if(!n)return 0; n->kind=N_COL; n->name=s->idz; n->namelen=s->idn; next(s); return n; }
+  if( s->tok=='T' ){ Node *n=node(s); if(!n)return 0; n->kind=N_STR; n->name=s->idz; n->namelen=s->idn; next(s); return n; }
   if( s->tok=='(' ){ next(s); Node *n=parseExpr(s); if(!n)return 0; if(s->tok!=')'){s->err="expected ')'";return 0;} next(s); return n; }
   s->err = s->err ? s->err : "expected a number, column, or '('";
   return 0;
@@ -124,7 +132,7 @@ static Node *parseExpr(P *s){
 }
 
 /* ─────────────────────────── code generator ─────────────────────────── */
-typedef struct { Vdbe *v; Table *pTab; int cursor; int next; } Ctx;
+typedef struct { sqlite3 *db; Vdbe *v; Table *pTab; int cursor; int next; } Ctx;
 
 /* Resolve a column name to its index; -1 for the rowid (incl. the IPK column). */
 static int resolveCol(Table *pTab, const char *z, int n, const char **pzErr){
@@ -151,6 +159,11 @@ static const char *codegen(Ctx *c, Node *n, int target){
     case N_NUM:
       sqlite3VdbeAddOp2(c->v, OP_Integer, (int)n->ival, target);
       break;
+    case N_STR: {
+      char *z = (char*)sqlite3DbStrNDup(c->db, n->name, (unsigned)n->namelen);
+      sqlite3VdbeAddOp4(c->v, OP_String8, 0, target, 0, z, P4_DYNAMIC);
+      break;
+    }
     case N_COL: {
       if( c->pTab==0 ){ return "column reference requires a FROM clause"; }
       int ci = resolveCol(c->pTab, n->name, n->namelen, &err);
@@ -205,8 +218,11 @@ static const char *codegenCondFalseJump(Ctx *c, Cond *w, int addrFalse){
 }
 
 /* ───────────────────────── compile a full SELECT ───────────────────────── */
-static int compileSelect(sqlite3 *db, const char *sql,
-                         sqlite3_stmt **ppStmt, int *pnCol, const char **pzErr){
+/* Public entry point (see zturso_frontend.h): compile `sql` in our dialect into
+** a runnable sqlite3_stmt on the ported engine. Declared extern so other TUs —
+** the Zig REPL example in examples/zturso_repl.zig — can drive the frontend. */
+int zturso_prepare(sqlite3 *db, const char *sql,
+                   sqlite3_stmt **ppStmt, int *pnCol, const char **pzErr){
   P s; memset(&s,0,sizeof(s)); s.p=sql; next(&s);
   if( s.tok!='S' ){ *pzErr="expected SELECT"; return SQLITE_ERROR; }
   next(&s);
@@ -270,7 +286,7 @@ static int compileSelect(sqlite3 *db, const char *sql,
   if( v==0 ){ sqlite3_mutex_leave(sqlite3_db_mutex(db)); *pzErr="out of memory"; return SQLITE_NOMEM; }
   sqlite3VdbeSetNumCols(v, nRes);
 
-  Ctx c = { v, pTab, 0, nRes };   /* cursor 0; temporaries start above result regs */
+  Ctx c = { db, v, pTab, 0, nRes };   /* cursor 0; temporaries start above result regs */
   const char *cgErr=0;
 
   if( tabName==0 ){
@@ -304,6 +320,18 @@ static int compileSelect(sqlite3 *db, const char *sql,
   sParse.nMem = c.next;
   if( cgErr ){ sqlite3_mutex_leave(sqlite3_db_mutex(db)); *pzErr=cgErr; return SQLITE_ERROR; }
 
+  /* Give result columns names (plain column refs and '*'); computed expressions
+  ** stay unnamed and the caller can fall back to col0/col1/... */
+  for(int i=0;i<nRes;i++){
+    char nb[128]; const char *nm=0;
+    if( star ){ nm = pTab->aCol[i].zCnName; }
+    else if( cols[i]->kind==N_COL ){
+      int ln=cols[i]->namelen; if(ln>127) ln=127;
+      memcpy(nb, cols[i]->name, ln); nb[ln]=0; nm=nb;
+    }
+    if( nm ) sqlite3VdbeSetColName(v, i, COLNAME_NAME, nm, SQLITE_TRANSIENT);
+  }
+
   sqlite3FinishCoding(&sParse);
   int rc = sParse.rc;
   sqlite3_mutex_leave(sqlite3_db_mutex(db));
@@ -313,10 +341,12 @@ static int compileSelect(sqlite3 *db, const char *sql,
   return SQLITE_OK;
 }
 
+#ifndef ZTURSO_NO_MAIN   /* the demo driver; define ZTURSO_NO_MAIN to reuse zturso_prepare() as a library */
+
 /* Run a statement, print all rows as "v | v | ...", return row count or <0. */
 static int runSelect(sqlite3 *db, const char *sql, int show){
   sqlite3_stmt *stmt=0; int nCol=0; const char *zErr=0;
-  int rc = compileSelect(db, sql, &stmt, &nCol, &zErr);
+  int rc = zturso_prepare(db, sql, &stmt, &nCol, &zErr);
   if( rc!=SQLITE_OK ){ if(show) printf("  %-34s -> ERROR: %s\n", sql, zErr?zErr:"?"); return -1; }
   int rows=0;
   if(show) printf("  %-34s ->", sql);
@@ -364,13 +394,16 @@ int main(int argc, char **argv){
     "SELECT id FROM emp WHERE salary < 120 AND id <> 1",
     "SELECT id, salary+1 FROM emp WHERE id > 2",
     "SELECT id FROM emp WHERE salary = 130",
+    "SELECT name FROM emp WHERE dept = 'eng'",
+    "SELECT name, salary FROM emp WHERE dept = 'ops' AND salary >= 125",
+    "SELECT id FROM emp WHERE dept <> 'eng'",
   };
   int fails=0;
   for(int i=0;i<(int)(sizeof(checks)/sizeof(checks[0]));i++){
     /* Our frontend result as a string */
     sqlite3_stmt *a=0; int na=0; const char *ea=0;
     char ours[512]=""; char ref[512]="";
-    if( compileSelect(db, checks[i], &a, &na, &ea)==SQLITE_OK ){
+    if( zturso_prepare(db, checks[i], &a, &na, &ea)==SQLITE_OK ){
       while( sqlite3_step(a)==SQLITE_ROW ){ for(int j=0;j<na;j++){ char b[64]; snprintf(b,sizeof b,"%s%s", j?",":"", sqlite3_column_text(a,j)?(const char*)sqlite3_column_text(a,j):"NULL"); strncat(ours,b,sizeof(ours)-strlen(ours)-1);} strncat(ours,";",sizeof(ours)-strlen(ours)-1); }
     }
     if(a) sqlite3_finalize(a);
@@ -391,3 +424,5 @@ int main(int argc, char **argv){
   sqlite3_close(db);
   return fails==0 ? 0 : 2;
 }
+
+#endif /* ZTURSO_NO_MAIN */

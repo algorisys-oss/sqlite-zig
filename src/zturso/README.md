@@ -25,9 +25,18 @@ zig build zturso-vfs      # Phase 2: route engine I/O through a pluggable VFS
 zig build zturso-vector   # Phase 4: vector search (kNN) via registered functions
 zig build zturso-mvcc     # Phase 3: concurrency baseline demo (marks the MVCC boundary)
 
-# ad-hoc: our frontend compiling arbitrary SQL to VDBE and running it
+# interactive Zig REPL driving the frontend (examples/zturso_repl.zig)
+zig build zturso-repl
+printf 'SELECT 2+3*4\nSELECT name, dept FROM emp WHERE dept=\x27eng\x27\n' | zig build zturso-repl
+
+# ad-hoc one-shot: our frontend compiling arbitrary SQL to VDBE and running it
 zig build zturso && ./zig-out/bin/zturso_frontend "SELECT name, salary FROM emp WHERE salary >= 125"
 ```
+
+The frontend grammar: `SELECT * | expr[, expr…] [FROM t [WHERE cond [AND cond]…]]`
+where `expr` is integers, **'text' literals**, column names, `rowid`, `+ - * / %`,
+parentheses and unary minus; `cond` is `expr {= <> != < <= > >=} expr`. Result
+columns from plain column refs / `*` are named; computed columns are unnamed.
 
 None of these touch `zig build` or `zig build test` — the fidelity build stays
 free of experimental artifacts and `libsqlite3` is unchanged.
@@ -58,7 +67,13 @@ would begin (lifting the single-writer limit); the plan is in
 - **`frontend.c`** — Phases 1b/1c. A self-contained tokenizer + recursive-descent
   parser + AST + code generator for a small SQL dialect
   (`SELECT expr… [FROM t [WHERE cond…]]`), emitting real arithmetic and cursor
-  opcodes. Includes a differential self-check against the fidelity engine.
+  opcodes. Exposes `zturso_prepare()` (see `zturso_frontend.h`) so other TUs can
+  drive it. Includes a differential self-check against the fidelity engine.
+- **`zturso_frontend.h`** — the `zturso_prepare()` C-ABI declaration; compile
+  `frontend.c` with `-DZTURSO_NO_MAIN` to link it as a library (no demo `main`).
+- **`../../examples/zturso_repl.zig`** — a **Zig** REPL that reads SQL from stdin,
+  compiles it with `zturso_prepare()`, and prints result rows — the Zig-facing
+  demonstration that a non-SQLite frontend targets the ported VDBE.
 - **`trace_vfs.c`** — Phase 2. A `sqlite3_vfs` wrapping the default VFS, counting
   every read/write/sync; demonstrates the I/O backend is swappable.
 - **`vector.c`** — Phase 4. Registers vector-distance functions and runs kNN as

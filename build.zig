@@ -385,6 +385,29 @@ pub fn build(b: *std.Build) void {
     Zturso.step(b, target, optimize, lib, &sqlite_flags, zturso_test, "zturso_vfs", "src/zturso/trace_vfs.c", "zturso-vfs", "Phase 2: route the ported engine's I/O through a pluggable VFS", false);
     Zturso.step(b, target, optimize, lib, &sqlite_flags, zturso_test, "zturso_vector", "src/zturso/vector.c", "zturso-vector", "Phase 4: vector search (kNN) over the ported engine via registered functions", false);
     Zturso.step(b, target, optimize, lib, &sqlite_flags, zturso_test, "zturso_mvcc", "src/zturso/mvcc_demo.c", "zturso-mvcc", "Phase 3: concurrency baseline demo (marks the MVCC boundary; see docs/zturso/phase3-mvcc.md)", false);
+
+    // `zig build zturso-repl` — an interactive Zig example that drives the fork's
+    // frontend (examples/zturso_repl.zig). It compiles frontend.c with
+    // -DZTURSO_NO_MAIN to reuse zturso_prepare() as a library. Kept out of the
+    // zturso-test gate because it reads stdin.
+    {
+        const repl_flags = sqlite_flags ++ [_][]const u8{"-DZTURSO_NO_MAIN"};
+        const repl_mod = b.createModule(.{ .root_source_file = b.path("examples/zturso_repl.zig"), .target = target, .optimize = optimize, .link_libc = true });
+        repl_mod.linkLibrary(lib);
+        repl_mod.linkSystemLibrary("z", .{});
+        repl_mod.linkSystemLibrary("m", .{});
+        repl_mod.addIncludePath(b.path("vendor/tsrc"));
+        repl_mod.addCSourceFile(.{ .file = b.path("src/zturso/frontend.c"), .flags = &repl_flags });
+        const repl_exe = b.addExecutable(.{ .name = "zturso_repl", .root_module = repl_mod });
+        const repl_run = b.addRunArtifact(repl_exe);
+        repl_run.setCwd(b.path("."));
+        if (@hasField(@TypeOf(b.*), "args")) {
+            if (b.args) |a| repl_run.addArgs(a);
+        }
+        const s = b.step("zturso-repl", "Interactive Zig REPL over the fork's frontend (examples/zturso_repl.zig)");
+        s.dependOn(&b.addInstallArtifact(repl_exe, .{}).step);
+        s.dependOn(&repl_run.step);
+    }
 }
 
 /// The library translation-unit list. Sourced from vendor/tu.txt (one C
