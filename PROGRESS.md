@@ -611,17 +611,63 @@ zig build test        # green: functional suite with 6 Zig modules swapped in
 tools/tcltest.sh --zig select1 func bitvec where   # green: TCL suite, Zig objs
 ```
 
+## Upstream sync anchor
+
+The Zig port must track a **fixed, released** upstream — never live `master`. This
+is the anchor of record: the exact upstream point our vendored `vendor/` sources
+(and therefore every `src/*.zig` port) correspond to.
+
+| | |
+|---|---|
+| Vendored version | **3.54.0** (`SQLITE_VERSION_NUMBER 3054000`) — 3.54.0-*in-development* |
+| `SQLITE_SOURCE_ID` | `2026-06-24 14:17:52 395cbed103af08e3a4fafd9a3041205535e019d4aeb58b46c4a7e4f3bca545c9` (Fossil hash) |
+| Git-mirror commit | `1968870813` — the same check-in in `github.com/sqlite/sqlite` (was the clone point) |
+| Reference tree | `/home/rajesh/opensource/sqlite-ports/sqlite-c` — git clone of the mirror, currently on `master` |
+
+**Fossil ↔ git note:** the `SOURCE_ID` hash is Fossil's; the git mirror uses
+different hashes, so it won't `git log`. The bridge is the commit *date* —
+`2026-06-24 14:17:52` resolves to git `1968870813`. That SHA is the baseline
+hard-coded in [tools/upstream_drift.sh](tools/upstream_drift.sh).
+
+**Check drift at any time (read-only, never mutates the reference):**
+
+```bash
+tools/upstream_drift.sh            # baseline -> latest release tag (or master)
+tools/upstream_drift.sh --fetch    # refresh remote tags first
+tools/upstream_drift.sh version-3.54.0   # diff against a specific tag
+```
+
+It prints how many commits upstream is ahead and which changed engine files map
+to a `src/*.zig` port (● = must be reconciled). As of the last check, `master`
+is **96 commits** ahead of the baseline — but all of it is *unreleased 3.54.0
+dev-churn* (newest release tag is only `version-3.53.3`), so there is nothing
+stable to sync to yet.
+
+### The version-hop loop (do this per RELEASE, atomically)
+
+Never leave the reference on `master` while the port lags. When a new
+`version-*` tag ships, advance both together in one hop:
+
+1. `git -C <ref> fetch --tags && git -C <ref> checkout version-X.Y.Z`
+2. `tools/upstream_drift.sh version-X.Y.Z` → the exact ● module list to re-port.
+3. Re-vendor `vendor/` from that tag (regen steps below).
+4. Apply each C delta to the matching `src/*.zig`; `git diff <baseline>..version-X.Y.Z -- src/<f>.c` is the spec for `src/<f>.zig`.
+5. `zig build test` + differential vs the new C amalgamation → back to byte-identical.
+6. Update this anchor table (new version/SOURCE_ID/SHA) + `BASELINE` in `upstream_drift.sh`.
+
+---
+
 If `vendor/` is missing or upstream is bumped, regenerate it:
 
 ```bash
 mkdir -p build/gen && cd build/gen
-/home/rajesh/opensource/sqlite/configure --dev      # out-of-tree; keeps upstream clean
+/home/rajesh/opensource/sqlite-ports/sqlite-c/configure --dev   # out-of-tree; keeps upstream clean
 make sqlite3.c sqlite3.h                             # builds amalgamation + parse.c/opcodes.*/keywordhash.h
 # vendor amalgamation:
 cp sqlite3.c sqlite3.h shell.c sqlite3ext.h ../../vendor/amalg/
 # vendor per-file set:
 cp tsrc/*.c tsrc/*.h ../../vendor/tsrc/
-cp /home/rajesh/opensource/sqlite/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
+cp /home/rajesh/opensource/sqlite-ports/sqlite-c/ext/rtree/sqlite3rtree.h ../../vendor/tsrc/
 # regenerate the TU manifest (exclude non-standalone files):
 ( cd ../../vendor/tsrc && for f in *.c; do case "$f" in geopoly.c|shell.c|tclsqlite-ex.c) ;; *) echo "$f";; esac; done | sort ) > ../../vendor/tu.txt
 ```
