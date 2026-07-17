@@ -338,6 +338,27 @@ pub fn build(b: *std.Build) void {
         if (b.args) |args| example_run.addArgs(args);
     }
     b.step("example", "Run the interactive blog CRUD terminal app").dependOn(&example_run.step);
+
+    // ── sqlite-zturso fork (branch-only; see EXPERIMENT.md) ──────────────────
+    // `zig build zturso` — Phase 1 proof-of-concept: a "frontend" that emits
+    // VDBE bytecode by hand (no tokenizer/parser) and runs it on the ported Zig
+    // interpreter, proving the VDBE is a pluggable IR. It reaches into SQLite's
+    // internal API (sqliteInt.h), so it is compiled with the SAME sqlite_flags
+    // as the ported modules — otherwise Parse/Vdbe struct layouts wouldn't match
+    // — and linked against our libsqlite3.a. This is a separate, opt-in step: it
+    // does not touch `zig build` or `zig build test`, so the fidelity build is
+    // unaffected exactly as the fork charter requires.
+    {
+        const zt_mod = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
+        zt_mod.linkLibrary(lib);
+        zt_mod.linkSystemLibrary("z", .{});
+        zt_mod.linkSystemLibrary("m", .{});
+        zt_mod.addIncludePath(b.path("vendor/tsrc"));
+        zt_mod.addCSourceFile(.{ .file = b.path("src/zturso/poc_frontend.c"), .flags = &sqlite_flags });
+        const zt_exe = b.addExecutable(.{ .name = "zturso_poc", .root_module = zt_mod });
+        const zt_run = b.addRunArtifact(zt_exe);
+        b.step("zturso", "Phase 1 PoC: run a hand-emitted VDBE program on the ported engine").dependOn(&zt_run.step);
+    }
 }
 
 /// The library translation-unit list. Sourced from vendor/tu.txt (one C
