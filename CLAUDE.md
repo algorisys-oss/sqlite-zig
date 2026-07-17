@@ -19,6 +19,7 @@ for the staged approach.
 | SQLite C source | `/home/rajesh/opensource/sqlite-ports/sqlite-c` | Public domain. Now a **git clone** of `github.com/sqlite/sqlite` (the read-only GitHub mirror) on `master`. `VERSION` reads `3.54.0` but `master` is 3.54.0-in-development — ahead of any released tag. Our vendored sources are pinned at the 3.54.0 baseline; see PROGRESS.md before re-vendoring off a moving `master`. |
 | Zig compiler/stdlib | `/home/rajesh/opensource/ziglang/zig` | Build/run toolchain reference. |
 | Zig toolchain in PATH | `zig` (`~/.asdf/shims/zig`) | `0.17.0-dev.644+3de725074`. |
+| Turso (comparison only) | `/home/rajesh/opensource/sqlite-ports/turso` | Rust clean-room SQLite rewrite; not shared code. Basis for [docs/turso-comparison.md](docs/turso-comparison.md). |
 
 Treat both source trees as **immutable references**. All new work lands here.
 

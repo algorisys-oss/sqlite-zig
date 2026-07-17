@@ -1,12 +1,12 @@
 # sqlite-zig vs. Turso — a feature & strategy comparison
 
 A side-by-side comparison of this project (**sqlite-zig**) with **Turso**
-(`/home/rajesh/opensource/turso`), another effort to re-implement SQLite in a
+(`/home/rajesh/opensource/sqlite-ports/turso`), another effort to re-implement SQLite in a
 modern systems language. No code is shared between the two; this document only
 compares their goals, approaches, and feature coverage.
 
-> Sources: Turso's [`README.md`](file:///home/rajesh/opensource/turso/README.md)
-> and [`COMPAT.md`](file:///home/rajesh/opensource/turso/COMPAT.md) (its
+> Sources: Turso's [`README.md`](file:///home/rajesh/opensource/sqlite-ports/turso/README.md)
+> and [`COMPAT.md`](file:///home/rajesh/opensource/sqlite-ports/turso/COMPAT.md) (its
 > self-reported compatibility matrix), and this repo's
 > [PROGRESS.md](../PROGRESS.md) / [CLAUDE.md](../CLAUDE.md). Turso's status is a
 > moving target — treat its ✅/🚧/❌ marks as a snapshot.
@@ -251,6 +251,37 @@ A faithful port can't have these — they're new engine capabilities:
 - **Turso**: self-described **BETA**, "not yet production" for mission-critical
   use though it powers some production apps. Compatibility is "partially
   supported" for both the SQL dialect and the C API per its own `COMPAT.md`.
+
+## Addendum — 2026-07: Turso's "Postgres in Rust" announcement
+
+Turso [announced](https://turso.tech/blog/a-new-modern-version-of-postgres-in-rust)
+a **Postgres frontend on the same engine**: parse Postgres syntax → common AST →
+**VDBE bytecode** → run on Turso's VM, positioning Turso as "the LLVM of
+databases" (one bytecode backend, many SQL frontends). It sharpens the
+fidelity-vs-divergence split this doc already draws, rather than changing it.
+
+- **What's real.** The embedded angle is the genuine novelty — "Postgres in a
+  browser tab, no server," Postgres-the-*file*. Their deterministic simulation
+  testing is a legitimate moat. And they're candid: they explicitly reject 100%
+  compatibility ("compatible enough… at the core") and say parity takes years.
+- **What's hand-waved.** The load-bearing claim — that SQLite and Postgres
+  "share fundamental operations representable in a common bytecode" — is true for
+  scans/joins/sorts and misleading where Postgres *is* Postgres: MVCC heap-tuple
+  semantics, a rich static type system (arrays/ranges/composite/`CREATE TYPE`),
+  SQLSTATE codes, `COPY`, cursors, `LISTEN/NOTIFY`. VDBE is coupled to SQLite's
+  B-tree storage and dynamic type-affinity — the *opposite* on both axes. Parsing
+  the syntax is the easy part; the semantics are the work. Wire-compatible ≠
+  behavior-compatible — the systems that actually cleared this wall (Aurora,
+  Yugabyte) reused Postgres's own C planner/executor; Turso rejects that
+  shortcut. (The Doom-in-VDBE demo proves Turing-completeness, never in doubt —
+  not that Postgres semantics map cleanly.)
+- **Why it matters here.** The whole announcement rests on VDBE being a pluggable
+  IR under new frontends — the exact layer **sqlite-zig ports to Zig under a
+  strict byte-identical guarantee**. Same VDBE ancestry, opposite contract:
+  sqlite-zig promises "it *is* SQLite 3.54.0"; Turso now promises "one engine
+  wearing SQLite *and* Postgres faces, compatible enough." It's a bold,
+  honestly-hedged bet whose demo is weeks away and whose real payload is years
+  away — and it further widens Turso's scope away from being a SQLite drop-in.
 
 ---
 
