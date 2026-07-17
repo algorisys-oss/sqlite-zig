@@ -18,6 +18,15 @@ rewrite.
 > alternates — see [docs/not-migrated.md](docs/not-migrated.md) for the full list
 > and rationale. See also [PROGRESS.md](PROGRESS.md) and [plan.md](plan.md).
 
+> **⑂ Want more than parity?** An experimental **`sqlite-zturso`** branch builds
+> Turso-style capabilities *on top of* this ported engine — a pluggable SQL
+> frontend that compiles straight to the Zig VDBE, a pluggable VFS, vector
+> search, and an MVCC track. It **deliberately diverges** from upstream, so it
+> lives on its own branch; `main`/`dev` stay byte-identical to SQLite C and never
+> take code from it. Browse it at
+> [`tree/sqlite-zturso`](https://github.com/algorisys-oss/sqlite-zig/tree/sqlite-zturso)
+> (see its `EXPERIMENT.md` and `src/zturso/README.md`).
+
 ## How it works
 
 SQLite is built from its individual C translation units (not the amalgamation),
