@@ -18,6 +18,15 @@ rewrite.
 > alternates — see [docs/not-migrated.md](docs/not-migrated.md) for the full list
 > and rationale. See also [PROGRESS.md](PROGRESS.md) and [plan.md](plan.md).
 
+> **⑂ You are on the `sqlite-zturso` branch.** This is an **experimental fork**
+> that deliberately abandons the fidelity contract to build Turso-style
+> capabilities *on top of* the ported Zig VDBE — a pluggable SQL frontend, a
+> pluggable VFS, vector search, and a concurrency/MVCC track. It **never merges
+> back** to `main`/`dev` (which stay byte-identical to SQLite C) and may graduate
+> to its own repo. Run the demos with `zig build zturso-test`. See
+> [EXPERIMENT.md](EXPERIMENT.md) for the charter and [src/zturso/README.md](src/zturso/README.md)
+> for per-phase status and commands.
+
 ## How it works
 
 SQLite is built from its individual C translation units (not the amalgamation),
@@ -314,6 +323,9 @@ recurring C→Zig bug patterns the suites catch).
 | [PROGRESS.md](PROGRESS.md) | Current status, resume point, and how to port a module. |
 | [docs/](docs/) | Design & process notes — [architecture.md](docs/architecture.md), [testing.md](docs/testing.md), [migration-workflow.md](docs/migration-workflow.md), [not-migrated.md](docs/not-migrated.md), [turso-comparison.md](docs/turso-comparison.md) & [limbo-comparison.md](docs/limbo-comparison.md) (feature comparisons vs. the Rust SQLite rewrites). |
 | [CLAUDE.md](CLAUDE.md) | Agent/contributor conventions. |
+| [EXPERIMENT.md](EXPERIMENT.md) | **(fork-only)** the `sqlite-zturso` charter, governance, and phase roadmap. |
+| [src/zturso/](src/zturso/) | **(fork-only)** the experiments: pluggable frontend, VFS, vector search, MVCC demo — see [src/zturso/README.md](src/zturso/README.md). |
+| [docs/zturso/](docs/zturso/) | **(fork-only)** design notes, e.g. [phase3-mvcc.md](docs/zturso/phase3-mvcc.md). |
 
 ## License
 
