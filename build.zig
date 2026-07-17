@@ -348,17 +348,33 @@ pub fn build(b: *std.Build) void {
     // — and linked against our libsqlite3.a. This is a separate, opt-in step: it
     // does not touch `zig build` or `zig build test`, so the fidelity build is
     // unaffected exactly as the fork charter requires.
-    {
-        const zt_mod = b.createModule(.{ .target = target, .optimize = optimize, .link_libc = true });
-        zt_mod.linkLibrary(lib);
-        zt_mod.linkSystemLibrary("z", .{});
-        zt_mod.linkSystemLibrary("m", .{});
-        zt_mod.addIncludePath(b.path("vendor/tsrc"));
-        zt_mod.addCSourceFile(.{ .file = b.path("src/zturso/poc_frontend.c"), .flags = &sqlite_flags });
-        const zt_exe = b.addExecutable(.{ .name = "zturso_poc", .root_module = zt_mod });
-        const zt_run = b.addRunArtifact(zt_exe);
-        b.step("zturso", "Phase 1 PoC: run a hand-emitted VDBE program on the ported engine").dependOn(&zt_run.step);
-    }
+    // Helper: an executable that compiles one fork-only C source against our
+    // libsqlite3.a, using the same sqlite_flags as the ported modules.
+    const zturso = struct {
+        fn target_step(bb: *std.Build, tgt: anytype, opt: anytype, l: anytype, flags: []const []const u8, name: []const u8, src: []const u8, step_name: []const u8, desc: []const u8, forward_args: bool) void {
+            const m = bb.createModule(.{ .target = tgt, .optimize = opt, .link_libc = true });
+            m.linkLibrary(l);
+            m.linkSystemLibrary("z", .{});
+            m.linkSystemLibrary("m", .{});
+            m.addIncludePath(bb.path("vendor/tsrc"));
+            m.addCSourceFile(.{ .file = bb.path(src), .flags = flags });
+            const exe = bb.addExecutable(.{ .name = name, .root_module = m });
+            const run_art = bb.addRunArtifact(exe);
+            if (forward_args) {
+                if (@hasField(@TypeOf(bb.*), "args")) {
+                    if (bb.args) |a| run_art.addArgs(a);
+                }
+            }
+            const s = bb.step(step_name, desc);
+            // Install the binary as part of THIS step only (not the default `zig
+            // build`), so ad-hoc `zig-out/bin/<name> "SELECT …"` works while the
+            // fidelity build stays free of experimental artifacts.
+            s.dependOn(&bb.addInstallArtifact(exe, .{}).step);
+            s.dependOn(&run_art.step);
+        }
+    };
+    zturso.target_step(b, target, optimize, lib, &sqlite_flags, "zturso_frontend", "src/zturso/frontend.c", "zturso", "Phase 1b: input-driven frontend (text->AST->VDBE) on the ported engine", true);
+    zturso.target_step(b, target, optimize, lib, &sqlite_flags, "zturso_poc", "src/zturso/poc_frontend.c", "zturso-poc", "Phase 1a: run a hand-emitted VDBE program on the ported engine", false);
 }
 
 /// The library translation-unit list. Sourced from vendor/tu.txt (one C
